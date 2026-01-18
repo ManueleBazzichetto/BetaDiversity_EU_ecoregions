@@ -1,0 +1,27 @@
+# Ignore folders
+
+CLC_layers/
+Coastline_emodnet/
+EasyClimateData/
+GSHHG/
+HumanModificationIndex/
+MapOfEcoregions/
+NaturalEarth/
+PlantBert_class/
+tmp_obj/
+TopographyData/
+
+
+# Ignore files
+
+.RData
+.Rhistory
+Old_scripts_and_notes.R
+Find_isolated_plots.R
+Data_Cleaning_20250327_from_MGlaser.Rmd
+GDM_EuropeanEcoregions.Rproj
+
+# Ignore RStudio project files
+
+*.Rproj
+.Rproj.user/
