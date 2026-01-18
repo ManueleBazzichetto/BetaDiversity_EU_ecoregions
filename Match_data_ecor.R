@@ -2382,7 +2382,7 @@ plot(summary(WesEu_bf_genetic1_gr, interactions = T, un = F))
 #that is why a caliper for Slope was included
 WesEu_bf_genetic1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = WesEu_bf_grass,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                std.caliper = TRUE, caliper = c(Elevation = 1.9, Roughness = 1.4, Slope = 1.5))
+                                std.caliper = TRUE, caliper = c(Elevation = 1.9, Roughness = 1.2, Slope = 1.3))
 
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
