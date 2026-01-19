@@ -2387,3 +2387,71 @@ WesEu_bf_genetic1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope,
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T))
+
+
+
+#----extract matched datasets and prepare them for GDMs
+
+#Alps_conifer_and_mixed_forests: Alps_cmf_genetic1_ratio1_cal1_gr
+#Baltic_mixed_forests: Baltic_mf_genetic1_ratio1_cal1_gr
+#Cantabrian_mixed_forests: Cant_mf_genetic1_ratio1_gr
+#Carpathian_montane_forests: Carp_mf_pscore1_ord1_cal1_gr
+#Celtic_broadleaf_forests: Celtic_bf_mahala1_ord1_cal1_gr
+#Central_European_mixed_forests: CenEu_mf_genetic1_gr
+#English_Lowlands_beech_forests: EngLow_bf_genetic1_ratio1_cal1_gr
+#European_Atlantic_mixed_forests: EuAtl_mf_genetic1_ratio1_cal1_gr
+#Italian_sclerophyllous_and_semi_deciduous_forests: ItaScl_sdf_rob_mahala1_ord1_gr
+#North_Atlantic_moist_mixed_forests: NAtl_mmf_genetic1_cal1_gr
+#Pannonian_mixed_forests: Pan_mf_rob_mahala1_ord1_cal1_gr
+#Sarmatic_mixed_forests: Sar_mf_genetic1_ratio1_gr
+#
+
+
+Matched_datasets_grass <- list(Alps_cmf = Alps_cmf_genetic1_ratio1_cal1_gr,
+                               Baltic_mf = Baltic_mf_genetic1_ratio1_cal1_gr,
+                               Cant_mf = Cant_mf_genetic1_ratio1_gr,
+                               Carp_mf = Carp_mf_pscore1_ord1_cal1_gr,
+                               Celtic_bf = Celtic_bf_mahala1_ord1_cal1_gr,
+                               CenEu_mf = CenEu_mf_genetic1_gr,
+                               EngLow_bf = EngLow_bf_genetic1_ratio1_cal1_gr,
+                               EuAtl_mf = EuAtl_mf_genetic1_ratio1_cal1_gr,
+                               ItaScl_sdf = ItaScl_sdf_rob_mahala1_ord1_gr,
+                               NAtl_mmf = NAtl_mmf_genetic1_cal1_gr,
+                               Pan_mf = Pan_mf_rob_mahala1_ord1_cal1_gr,
+                               Sar_mf = Sar_mf_genetic1_ratio1_gr)
+
+
+Matched_datasets_grass <- lapply(Matched_datasets_grass, function(mobj) {
+  
+  #extract matched data - drop 'matchdata' class because this is obj type not allowed in gdm package
+  dtf <- as.data.frame(MatchIt::match_data(mobj))
+  
+  #check weights are all 1
+  if(!all(dtf[['weights']] == 1)) stop('Not all weights are 1')
+  
+  #drop weights, subclass and distance columns
+  dtf <- dtf[setdiff(colnames(dtf), c('distance', 'weights', 'subclass'))]
+  
+  #split data frame in period 1 and 2
+  dtf_pr1 <- dtf[which(dtf[['Period']] == 'period1'), ]
+  
+  dtf_pr2 <- dtf[which(dtf[['Period']] == 'period2'), ]
+  
+  #res
+  res <- list(Period1 = dtf_pr1, Period2 =  dtf_pr2)
+  
+  return(res)
+  
+  })
+
+
+#check all datasets have min sample size (1k observations per period)
+all(sapply(Matched_datasets_grass, function(eco) all(sapply(eco, function(prd) nrow(prd) >= 1000L))))
+
+
+
+
+
+
+
+
