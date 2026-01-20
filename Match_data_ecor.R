@@ -2382,7 +2382,7 @@ plot(summary(WesEu_bf_genetic1_gr, interactions = T, un = F))
 #that is why a caliper for Slope was included
 WesEu_bf_genetic1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = WesEu_bf_grass,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                std.caliper = TRUE, caliper = c(Elevation = 1.9, Roughness = 1, Slope = 1.1))
+                                std.caliper = TRUE, caliper = c(Elevation = 1.9, Roughness = .9, Slope = 1))
 
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
@@ -2449,7 +2449,8 @@ Matched_datasets_grass <- lapply(Matched_datasets_grass, function(mobj) {
 all(sapply(Matched_datasets_grass, function(eco) all(sapply(eco, function(prd) nrow(prd) >= 1000L))))
 
 
-
+#save data to run GDM in another R project
+save(Matched_datasets_grass, EVA_veg, file = '/Temporary_proj_run_GDM/Tmp_data_for_GDM.RData')
 
 
 
