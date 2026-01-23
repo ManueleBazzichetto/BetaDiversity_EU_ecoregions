@@ -2247,7 +2247,7 @@ Sar_gr_perf <- do.call(rbind, lapply(list(PScore = Sar_mf_pscore1_ord1_ratio1_gr
 Sar_gr_perf #Genetic
 
 
-# ------ 13. Western_European_broadleaf_forests ------
+# ------ 13. Western_European_broadleaf_forests - Mahalanobis ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -2382,13 +2382,29 @@ plot(summary(WesEu_bf_genetic1_gr, interactions = T, un = F))
 #that is why a caliper for Slope was included
 WesEu_bf_genetic1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = WesEu_bf_grass,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                std.caliper = TRUE, caliper = c(Elevation = 1.9, Roughness = .9, Slope = 1))
+                                std.caliper = TRUE, caliper = c(Elevation = 1.6, Roughness = .6, Slope = .7))
 
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T))
 
+#--check matching performance
 
+#compare all methods
+Wes_gr_perf <- do.call(rbind, lapply(list(PScore = WesEu_bf_pscore1_ord1_cal1_gr,
+                                          Mah = WesEu_bf_mahala1_ord1_cal1_gr,
+                                          RMah = WesEu_bf_rob_mahala1_ord1_cal1_gr,
+                                          Genetic = WesEu_bf_genetic1_cal1_gr), check_match_performance))
+
+Wes_gr_perf #Mah provides good balance performance and large sample size (very similar performance than RMah)
+
+
+
+
+# ----
+# ----
+
+# ------ End of stat matching for grasslands ------
 
 #----extract matched datasets and prepare them for GDMs
 
@@ -2404,8 +2420,9 @@ plot(summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T))
 #North_Atlantic_moist_mixed_forests: NAtl_mmf_genetic1_cal1_gr
 #Pannonian_mixed_forests: Pan_mf_rob_mahala1_ord1_cal1_gr
 #Sarmatic_mixed_forests: Sar_mf_genetic1_ratio1_gr
-#
+#Western_European_broadleaf_forests: WesEu_bf_mahala1_ord1_cal1_gr
 
+#FROM HERE! Create Matched_datasets_grass including WesEu_bf_mahala1_ord1_cal1_gr
 
 Matched_datasets_grass <- list(Alps_cmf = Alps_cmf_genetic1_ratio1_cal1_gr,
                                Baltic_mf = Baltic_mf_genetic1_ratio1_cal1_gr,
