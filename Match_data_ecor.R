@@ -2469,7 +2469,8 @@ all(sapply(Matched_datasets_grass, function(eco) all(sapply(eco, function(prd) n
 #save data to run GDM in another R project
 save(Matched_datasets_grass, EVA_veg, file = '/Temporary_proj_run_GDM/Tmp_data_for_GDM.RData')
 
-
+#save EVA_duply - these plot id will be used to filter out observations to fit GDMs
+save(EVA_duply, file = '/Temporary_proj_run_GDM/EVA_duplicates.RData')
 
 
 
