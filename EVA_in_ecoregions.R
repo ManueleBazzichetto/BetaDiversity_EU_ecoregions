@@ -1467,6 +1467,53 @@ Grass_eco_prd[Grass_eco_prd$ECO_NAME %in% Grass_eco_minN, ]
 mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', replacement = ' ', x = Grass_eco_minN), ])
 
 
+#---------------subset EVA_meta to keep only forests
+
+Forest_meta <- EVA_meta[which(EVA_meta$Eunis_lev1 == 'T'), ]
+
+#check ecoregions including grasslands
+unique(Forest_meta$ECO_NAME) #53
+
+#drop obervations with Sampl_period not included between 1980 and 2022
+Forest_meta <- Forest_meta[as.integer(Forest_meta$Sampl_year) >= 1980 & as.integer(Forest_meta$Sampl_year) <= 2022, ]
+
+#check
+range(as.integer(Forest_meta$Sampl_year))
+
+#create period column
+Forest_meta$Period <- ifelse(as.integer(Forest_meta$Sampl_year) < 2000L, 'period1', 'period2')
+
+#check number of plots per ecoregion
+anyNA(Forest_meta$ECO_NAME) #FALSE
+table(Forest_meta$ECO_NAME)
+
+#check number of plots per ecoregion x period
+Forest_eco_prd <- as.data.frame(with(Forest_meta, table(ECO_NAME, Period)))
+
+#check how many ecoregions have sufficient data (at least 1000 per period)
+Forest_eco_nm <- unique(Forest_meta$ECO_NAME)
+
+#coerce ECO_NAME and Period to chr in Forest_eco_prd
+Forest_eco_prd$ECO_NAME <- as.character(Forest_eco_prd$ECO_NAME)
+Forest_eco_prd$Period <- as.character(Forest_eco_prd$Period)
+
+#11
+Forest_eco_minN <- names(which(sapply(Forest_eco_nm, function(nm) all(Forest_eco_prd[Forest_eco_prd == nm, 'Freq'] >= 1000))))
+
+Forest_eco_prd[Forest_eco_prd$ECO_NAME %in% Forest_eco_minN, ]
+
+#check spatial distribution of ecoregions
+mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', replacement = ' ', x = Forest_eco_minN), ])
+
+
+
+
+
+#-- check species with 0 cover in EVA_veg
+
+
+#-----to delete
+
 ##FROM HERE!!!!!!!
 
 
@@ -1515,13 +1562,4 @@ dcast(EVA_veg[PlotID %in% c(30014, 30015)], PlotID ~ Species_name, value.var = '
 
 #compute B-C
 as.matrix(vegan::vegdist(dcast(EVA_veg[PlotID %in% c(30014, 30015)], PlotID ~ Species_name, value.var = 'Cover_perc', fill = 0), 'bray'))
-
-
-
-#-- check species with 0 cover in EVA_veg
-
-
-
-
-
 

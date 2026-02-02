@@ -382,5 +382,108 @@ rm(Grass_hmi_cellID, Grass_sel_hmi, Grass_hmi_missing)
 save(Grass_sel_meta, file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Grass_selection_meta.RData')
 
 
+#----------------------------------Forests
+
+#vector including names of ecoregions with minimum sample size for analyses
+length(Forest_eco_minN) #11 ecoregions
+
+Forest_sel_meta <- Forest_meta[Forest_meta$ECO_NAME %in% Forest_eco_minN, ]
+
+#check range of Sampl_year within the ecoregions
+lapply(Forest_eco_minN, function(i) range(as.integer(Forest_sel_meta[Forest_sel_meta$ECO_NAME == i, 'Sampl_year'])))
 
 
+#----------------extract E-OBS climatic data
+
+#set width of temporal window for extracting climate data - temp_width kept at 5 as for grasslands
+#temp_width <- 5
+
+#create Cl_time_start column - start of the temporal window
+Forest_sel_meta$Cl_time_start <- with(Forest_sel_meta, (as.integer(Sampl_year) - (temp_width - 1)))
+
+#create Climate_cellID column
+Forest_cl_cellID <- terra::cellFromXY(object = clim_stack_proj[[1]], xy = as.matrix(Forest_sel_meta[c('X_laea', 'Y_laea')]))
+
+#check NA
+sum(is.na(Forest_cl_cellID)) #0
+
+Forest_sel_meta$Climate_cellID <- Forest_cl_cellID
+
+#extract climate data form cells
+test_start <- proc.time()
+
+Forest_sel_clmd <- extr_climate_eva_cells(x = Forest_sel_meta, cl_stack = clim_stack_proj,
+                                         cellID_col = 'Climate_cellID', from_col = 'Cl_time_start', to_col = 'Sampl_year')
+
+test_end <- proc.time() - test_start #approx 17 mins
+
+#check number and position of missing values
+sum(is.na(Forest_sel_clmd$Prcp)) #917 (out of 54674)
+sum(is.na(Forest_sel_clmd$Tavg)) #841
+
+setdiff(which(is.na(Forest_sel_clmd$Prcp)), which(is.na(Forest_sel_clmd$Tavg))) #77 cells
+setdiff(which(is.na(Forest_sel_clmd$Tavg)), which(is.na(Forest_sel_clmd$Prcp))) #1 cell
+
+#join climate data
+identical(class(Forest_sel_meta$Climate_cellID), class(Forest_sel_clmd$CellID)) #T
+identical(class(Forest_sel_meta$Cl_time_start), class(Forest_sel_clmd$Cl_time_start)) #T
+identical(class(Forest_sel_meta$Sampl_year), class(Forest_sel_clmd$Cl_time_end)) #T
+
+
+Forest_sel_meta <- dplyr::left_join(x = Forest_sel_meta, y = Forest_sel_clmd, by = c('Climate_cellID' = 'CellID',
+                                                                                  'Cl_time_start' = 'Cl_time_start',
+                                                                                  'Sampl_year' = 'Cl_time_end'))
+
+#check number of locations with NA for Prcp and/or Tavg
+sum(is.na(Forest_sel_meta$Prcp)) #1715
+sum(is.na(Forest_sel_meta$Tavg)) #1621
+
+
+#plot ids for which both Prcp and Tavg are NA
+Cl_missing_loc.for <- intersect(Forest_sel_meta$PlotID[which(is.na(Forest_sel_meta$Prcp))], Forest_sel_meta$PlotID[which(is.na(Forest_sel_meta$Tavg))])
+
+#unique for Prcp
+Prcp_missing_loc.for <- setdiff(Forest_sel_meta$PlotID[which(is.na(Forest_sel_meta$Prcp))], Forest_sel_meta$PlotID[which(is.na(Forest_sel_meta$Tavg))])
+
+#unique for Tavg
+Tavg_missing_loc.for <- setdiff(Forest_sel_meta$PlotID[which(is.na(Forest_sel_meta$Tavg))], Forest_sel_meta$PlotID[which(is.na(Forest_sel_meta$Prcp))])
+
+#check
+sum(duplicated(Cl_missing_loc.for)) #0
+sum(duplicated(Prcp_missing_loc.for)) #0
+sum(duplicated(Tavg_missing_loc.for)) #0
+
+
+#get info on locations missing cl data
+Cl_missing_loc.for <- Forest_sel_meta[Forest_sel_meta$PlotID %in% Cl_missing_loc.for, c('PlotID', 'Prcp', 'Tavg', 'Cl_time_start', 'Sampl_year', 'X_laea', 'Y_laea')]
+
+#check
+#all(is.na(Cl_missing_loc.for[[c('Prcp')]])) #T
+#all(is.na(Cl_missing_loc.for[[c('Tavg')]])) #T
+
+Cl_missing_loc.for <- fill_climate_gap(x = Cl_missing_loc.for, cl_stack = clim_stack_proj, loc_id_col = 'PlotID',
+                                      from_col = 'Cl_time_start', to_col = 'Sampl_year', rad_meters = ((res(clim_stack_proj)[1])+1))
+
+
+#check remaining NAs
+sum(is.na(Cl_missing_loc.for$Prcp)) #1108
+sum(is.na(Cl_missing_loc.for$Tavg)) #1050
+identical(which(is.na(Cl_missing_loc.for$Prcp)), which(is.na(Cl_missing_loc.for$Tavg))) #FALSE
+
+#fill in data
+class(Forest_sel_meta$PlotID); class(Cl_missing_loc.for$PlotID)
+
+#run it separately for Prcp and Tavg
+
+#for(i in Cl_missing_loc.for$PlotID) {
+#  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Prcp'] <- Cl_missing_loc.for[Cl_missing_loc.for$PlotID == i, 'Prcp']
+#  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Tavg'] <- Cl_missing_loc.for[Cl_missing_loc.for$PlotID == i, 'Tavg']
+#}
+
+#rm(i)
+
+#check
+sum(is.na(Forest_sel_meta$Prcp)) #
+sum(is.na(Forest_sel_meta$Tavg)) #
+
+#FROM HERE - line 172

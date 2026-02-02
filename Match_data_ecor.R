@@ -2473,4 +2473,12 @@ save(Matched_datasets_grass, EVA_veg, file = '/Temporary_proj_run_GDM/Tmp_data_f
 save(EVA_duply, file = '/Temporary_proj_run_GDM/EVA_duplicates.RData')
 
 
+#-------------------------------------------------statistical matching of forests
+
+#use grass_col_to_use because columns to select in Forest_meta are the same
+
+#drop NAs for environmental drivers
+sapply(Forest_sel_meta[env_var_nm], function(cl) sum(is.na(cl)))
+
+#check plot size!!!!
 
