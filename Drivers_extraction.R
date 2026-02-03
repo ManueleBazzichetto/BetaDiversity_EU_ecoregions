@@ -473,17 +473,66 @@ identical(which(is.na(Cl_missing_loc.for$Prcp)), which(is.na(Cl_missing_loc.for$
 #fill in data
 class(Forest_sel_meta$PlotID); class(Cl_missing_loc.for$PlotID)
 
-#run it separately for Prcp and Tavg
+for(i in Cl_missing_loc.for$PlotID) {
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Prcp'] <- Cl_missing_loc.for[Cl_missing_loc.for$PlotID == i, 'Prcp']
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Tavg'] <- Cl_missing_loc.for[Cl_missing_loc.for$PlotID == i, 'Tavg']
+}
 
-#for(i in Cl_missing_loc.for$PlotID) {
-#  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Prcp'] <- Cl_missing_loc.for[Cl_missing_loc.for$PlotID == i, 'Prcp']
-#  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Tavg'] <- Cl_missing_loc.for[Cl_missing_loc.for$PlotID == i, 'Tavg']
-#}
-
-#rm(i)
+rm(i)
 
 #check
-sum(is.na(Forest_sel_meta$Prcp)) #
-sum(is.na(Forest_sel_meta$Tavg)) #
+sum(is.na(Forest_sel_meta$Prcp)) #1211 (1108 + 103 unique to Prcp)
+sum(is.na(Forest_sel_meta$Tavg)) #1059 (1050 + 9 unique to Prcp)
 
-#FROM HERE - line 172
+#check Sampl_year of obs for which Prcp and Tavg are missing
+Forest_sel_meta[Forest_sel_meta$PlotID %in% Prcp_missing_loc.for, 'Sampl_year'] #these are from different Sampl_year
+Forest_sel_meta[Forest_sel_meta$PlotID %in% Tavg_missing_loc.for, 'Sampl_year'] #these are all from the same Sampl_year (2015)
+
+#get coordinates of locations for which either Prcp or Tavg data are missing
+
+#Prcp
+Prcp_missing_loc.for <- Forest_sel_meta[Forest_sel_meta$PlotID %in% Prcp_missing_loc.for, c('X_laea', 'Y_laea', 'PlotID', 'Sampl_year')]
+
+#the prcp_tmp object was removed from the env
+prcp_tmp <- extract(clim_stack_proj[[grep(pattern = 'Prcp', x = names(clim_stack_proj))]],
+                    y = Prcp_missing_loc.for[, c('X_laea', 'Y_laea')])
+
+#-----FROM HERE
+
+#most plots have NAs for the whole temporal window (5-yrs) -> these will be assigned NA
+#the other plots have missing values for 1 or 2 years -> these will be assigned the mean of available data
+
+do.call(rbind, lapply(seq_len(nrow(Prcp_missing_loc.for)), function(i) {
+  
+  #extract Sampl_year
+  smp_yr <- as.integer(Prcp_missing_loc.for[i, 'Sampl_year'])
+  
+  #extract temporal window for the plot
+  twind <- paste0('Prcp_', seq.int(from = (smp_yr - (t_win - 1)), to = smp_yr, by = 1))
+  
+  #extract values of Prcp
+  vals <- unlist(prcp_tmp[i, twind])
+  
+  #check number of NAs
+  num_NAs <- sum(is.na(vals))
+  
+  #if the whole time series has NA -> assign NA, otherwise mean of available data
+  if(num_NAs == t_win) prcp_val <- NA else prcp_val <- mean(vals, na.rm = T)
+  
+  #result
+  res <- data.frame(PlotID = Prcp_missing_loc.for[i, 'PlotID'], TwindFrom = (smp_yr - (t_win - 1)), TwindTo = smp_yr, Prcp = prcp_val)
+  
+  return(res)
+  
+  }))
+
+#selecting years for which data are actually available between 2016 and 2020 - dropping 2020 due to NAs for all locations
+#prcp_tmp <- prcp_tmp[, paste0('Prcp_', 2016:2019)]
+
+#summarise prcp values
+#prcp_tmp <- rowMeans(prcp_tmp)
+
+#attach values to Prcp_missing_loc.gr
+#Prcp_missing_loc.gr$Prcp <- prcp_tmp
+
+
