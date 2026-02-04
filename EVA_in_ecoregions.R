@@ -186,6 +186,14 @@ multy_ass <- grep(pattern = ',', x = EVA_meta$Expert_system, value = T)
 #remove duplicated strings
 multy_ass <- unique(multy_ass)
 
+#IMPORTANT!!!! The function below does what needed, but it's odd
+#strsplit returns a list, so sapply(str_parts, substr, start = 1, stop = 1)
+#will operate on a single vector -> substr will return a vector of the same length as str_parts[[1]]
+#so sapply will return an array with dim nrow = length(str_parts[[1]]) and ncol = 1
+#importantly, the function can be vectorised by simply passing x as the whole multy_ass
+#and changing the content of the if statement, so that it returns a logical of the same length as multy_ass
+#this will make the use of sapply(multy_ass, check_multy_hab) unnecessary
+
 #function to compare first letters and check if they are identical or not
 check_multy_hab <- function(x) {
   #split the string by comma

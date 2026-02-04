@@ -378,6 +378,8 @@ sum(is.na(Grass_sel_meta$Hmi_value)) #914
 
 rm(Grass_hmi_cellID, Grass_sel_hmi, Grass_hmi_missing)
 
+#-----save Grass_sel_meta
+
 #save Grass_sel_meta - note that this object still contains NAs for the environmental drivers
 save(Grass_sel_meta, file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Grass_selection_meta.RData')
 
@@ -488,7 +490,7 @@ sum(is.na(Forest_sel_meta$Tavg)) #1059 (1050 + 9 unique to Prcp)
 Forest_sel_meta[Forest_sel_meta$PlotID %in% Prcp_missing_loc.for, 'Sampl_year'] #these are from different Sampl_year
 Forest_sel_meta[Forest_sel_meta$PlotID %in% Tavg_missing_loc.for, 'Sampl_year'] #these are all from the same Sampl_year (2015)
 
-#get coordinates of locations for which either Prcp or Tavg data are missing
+#get coordinates of locations for which either Prcp or Tavg data are missing - then extract climate values for these locations
 
 #Prcp
 Prcp_missing_loc.for <- Forest_sel_meta[Forest_sel_meta$PlotID %in% Prcp_missing_loc.for, c('X_laea', 'Y_laea', 'PlotID', 'Sampl_year')]
@@ -497,42 +499,210 @@ Prcp_missing_loc.for <- Forest_sel_meta[Forest_sel_meta$PlotID %in% Prcp_missing
 prcp_tmp <- extract(clim_stack_proj[[grep(pattern = 'Prcp', x = names(clim_stack_proj))]],
                     y = Prcp_missing_loc.for[, c('X_laea', 'Y_laea')])
 
-#-----FROM HERE
+#most of the plots have NAs for the whole temporal window (5-yrs) -> these will be assigned NA for Prcp
+#the other plots have missing values for 1 or max 2 years -> these will be assigned the mean of available data over the time series
 
-#most plots have NAs for the whole temporal window (5-yrs) -> these will be assigned NA
-#the other plots have missing values for 1 or 2 years -> these will be assigned the mean of available data
+#add starting year of temp window to Prcp_missing_loc.for
+Prcp_missing_loc.for$Start_yr <- (as.integer(Prcp_missing_loc.for$Sampl_year) - (t_win - 1))
 
-do.call(rbind, lapply(seq_len(nrow(Prcp_missing_loc.for)), function(i) {
+missing_over_time_prcp <- do.call(rbind, lapply(seq_len(nrow(Prcp_missing_loc.for)), function(i) {
   
-  #extract Sampl_year
-  smp_yr <- as.integer(Prcp_missing_loc.for[i, 'Sampl_year'])
+  #extract temporal window
+  temp_wind <- Prcp_missing_loc.for[i, c('Start_yr', 'Sampl_year')]
   
-  #extract temporal window for the plot
-  twind <- paste0('Prcp_', seq.int(from = (smp_yr - (t_win - 1)), to = smp_yr, by = 1))
+  temp_wind <- seq.int(from = temp_wind[['Start_yr']], to = as.integer(temp_wind[['Sampl_year']]), by = 1)
   
-  #extract values of Prcp
-  vals <- unlist(prcp_tmp[i, twind])
+  #extract data for the plot
+  prcp_data <- unlist(prcp_tmp[i, paste0('Prcp_', temp_wind)])
+
+  #count NAs
+  prcp_nas <- sum(is.na(prcp_data))
   
-  #check number of NAs
-  num_NAs <- sum(is.na(vals))
+  if(prcp_nas == t_win) prcp_val <- NA else prcp_val <- mean(prcp_data, na.rm = T)
   
-  #if the whole time series has NA -> assign NA, otherwise mean of available data
-  if(num_NAs == t_win) prcp_val <- NA else prcp_val <- mean(vals, na.rm = T)
-  
-  #result
-  res <- data.frame(PlotID = Prcp_missing_loc.for[i, 'PlotID'], TwindFrom = (smp_yr - (t_win - 1)), TwindTo = smp_yr, Prcp = prcp_val)
+  #return res
+  res <- data.frame(Prcp_val = prcp_val, Prcp_nas = prcp_nas)
   
   return(res)
   
   }))
 
-#selecting years for which data are actually available between 2016 and 2020 - dropping 2020 due to NAs for all locations
-#prcp_tmp <- prcp_tmp[, paste0('Prcp_', 2016:2019)]
+#add Prcp values
+Prcp_missing_loc.for$Prcp <- missing_over_time_prcp$Prcp_val
 
-#summarise prcp values
-#prcp_tmp <- rowMeans(prcp_tmp)
+#Tavg
+Tavg_missing_loc.for <- Forest_sel_meta[Forest_sel_meta$PlotID %in% Tavg_missing_loc.for, c('X_laea', 'Y_laea', 'PlotID', 'Sampl_year')]
 
-#attach values to Prcp_missing_loc.gr
-#Prcp_missing_loc.gr$Prcp <- prcp_tmp
+#tavg_tmp was deleted
+tavg_tmp <- extract(clim_stack_proj[[grep(pattern = 'Tavg', x = names(clim_stack_proj))]],
+                    y = Tavg_missing_loc.for[, c('X_laea', 'Y_laea')])
+
+tavg_tmp <- tavg_tmp[, paste0('Tavg_', 2011:2015)]
+
+#data are missing only in 2014
+tavg_tmp <- rowMeans(tavg_tmp, na.rm = T)
+
+Tavg_missing_loc.for$Tavg <- tavg_tmp
+
+#fill gaps in Forest_sel_meta
+sum(is.na(Forest_sel_meta$Prcp)) #1211
+sum(is.na(Forest_sel_meta$Tavg)) #1059
+
+for(i in Prcp_missing_loc.for$PlotID) {
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Prcp'] <- Prcp_missing_loc.for[Prcp_missing_loc.for$PlotID == i, 'Prcp']
+}
+
+rm(i)
+
+for(i in Tavg_missing_loc.for$PlotID) {
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Tavg'] <- Tavg_missing_loc.for[Tavg_missing_loc.for$PlotID == i, 'Tavg']
+}
+
+rm(i)
+
+#remaining NAs
+sum(is.na(Forest_sel_meta$Prcp)) #1184 (out of 111815)
+sum(is.na(Forest_sel_meta$Tavg)) #1050
+
+#remove objects created to get climate data
+rm(Forest_cl_cellID, test_start, Forest_sel_clmd, test_end, Cl_missing_loc.for, Prcp_missing_loc.for, Tavg_missing_loc.for, prcp_tmp, tavg_tmp, missing_over_time_prcp)
+
+
+#----------------extract Geomorpho90m topography data
+
+#create the Topo_cellID column
+Forest_topo_cellID <- cellFromXY(object = topo_stack_proj[[1]], xy = as.matrix(Forest_sel_meta[c('X_laea', 'Y_laea')]))
+
+#check NAs
+sum(is.na(Forest_topo_cellID)) #0
+
+#add Topo_cellID column to Forest_sel_meta
+Forest_sel_meta$Topo_cellID <- Forest_topo_cellID
+
+#extract topography values from xy
+Forest_sel_topo <- extract(topo_stack_proj, y = unique(Forest_sel_meta$Topo_cellID))
+
+#attach cell ID column
+Forest_sel_topo$CellID <- unique(Forest_sel_meta$Topo_cellID)
+
+#check NAs
+sapply(Forest_sel_topo[c(1, 2, 3)], function(cl) sum(is.na(cl))) #Elev: 45; Rough: 70; Slope: 70
+
+#Roughness and slope have NAs at the same position
+identical(which(is.na(Forest_sel_topo$Roughness)), which(is.na(Forest_sel_topo$Slope))) #TRUE
+
+#join topography data to Forest_sel_meta
+Forest_sel_meta <- dplyr::left_join(x = Forest_sel_meta, y = Forest_sel_topo, by = c('Topo_cellID' = 'CellID'))
+
+#check number of locations with NAs
+sapply(Forest_sel_meta[c('Elevation', 'Roughness', 'Slope')], function(cl) sum(is.na(cl))) #Elev: 104; Rough: 132; Slope: 132
+
+#check overlap of locations missing topo values
+length(intersect(which(is.na(Forest_sel_meta$Elevation)), which(is.na(Forest_sel_meta$Roughness)))) #66
+
+#get coordinates of locations with NAs
+Forest_elev_missing <- Forest_sel_meta[which(is.na(Forest_sel_meta$Elevation)), c('PlotID', 'X_laea', 'Y_laea')]
+
+Forest_elev_missing <- data.frame(PlotID = Forest_elev_missing$PlotID,
+                                 extract(x = topo_stack_proj[[c('Elevation')]], y = Forest_elev_missing[c('X_laea', 'Y_laea')],
+                                         search_radius = (res(topo_stack_proj)[1] + 1)))
+
+#select only relevant columns
+Forest_elev_missing <- Forest_elev_missing[c('PlotID', 'Elevation')]
+
+#exclude NAs
+Forest_elev_missing <- Forest_elev_missing[!is.na(Forest_elev_missing$Elevation), ] #47 values remaining (out 0f 104)
+
+
+#same for slope and roughness
+Forest_rghslo_missing <- Forest_sel_meta[which(is.na(Forest_sel_meta$Roughness)), c('PlotID', 'X_laea', 'Y_laea')]
+
+Forest_rghslo_missing <- data.frame(PlotID = Forest_rghslo_missing$PlotID,
+                                   extract(x = topo_stack_proj[[c('Roughness')]], y = Forest_rghslo_missing[c('X_laea', 'Y_laea')],
+                                           search_radius = (res(topo_stack_proj)[1] + 1)),
+                                   extract(x = topo_stack_proj[[c('Slope')]], y = Forest_rghslo_missing[c('X_laea', 'Y_laea')],
+                                           search_radius = (res(topo_stack_proj)[1] + 1)))
+
+
+Forest_rghslo_missing <- Forest_rghslo_missing[c('PlotID', 'Roughness', 'Slope')]
+
+#exclude NAs
+Forest_rghslo_missing <- na.omit(Forest_rghslo_missing) #71 values remaining out of 132
+
+#fill in gaps in Forest_sel_meta
+
+#Elevation
+
+for(i in Forest_elev_missing$PlotID) {
+  
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Elevation'] <- Forest_elev_missing[Forest_elev_missing$PlotID == i, 'Elevation']
+  
+}
+
+rm(i)
+
+#check
+sum(is.na(Forest_sel_meta$Elevation)) #57 (104 - 47) 
+
+#Roughness and slope
+
+for(i in Forest_rghslo_missing$PlotID) {
+  
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Roughness'] <- Forest_rghslo_missing[Forest_rghslo_missing$PlotID == i, 'Roughness']
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Slope'] <- Forest_rghslo_missing[Forest_rghslo_missing$PlotID == i, 'Slope']
+  
+}
+
+rm(i)
+
+#check
+sum(is.na(Forest_sel_meta$Roughness)) #61 (132 - 71)
+sum(is.na(Forest_sel_meta$Slope)) #61
+
+rm(Forest_topo_cellID, Forest_sel_topo, Forest_elev_missing, Forest_rghslo_missing)
+
+
+#----------------extract Human Modification Index values
+
+#create the Hmi_cellID column
+Forest_hmi_cellID <- cellFromXY(object = hmi_stack_proj[[1]], xy = as.matrix(Forest_sel_meta[c('X_laea', 'Y_laea')]))
+
+#check NA
+sum(is.na(Forest_hmi_cellID)) #0
+
+#add Hmi_cellID to Forest_sel_meta
+Forest_sel_meta$Hmi_cellID <- Forest_hmi_cellID
+
+#add the Hmi_yr column, which maps Sampl_year to the closest available year of HM data
+Forest_sel_meta$Hmi_yr <- get_hmi_year(x = Forest_sel_meta$Sampl_year) 
+
+#extract hmi values from cells
+test_start <- proc.time()
+
+Forest_sel_hmi <- extr_hmi_eva_cells(x = Forest_sel_meta, hmi_stack = hmi_stack_proj, cellID_col = 'Hmi_cellID', hmi_yr_col = 'Hmi_yr') 
+
+test_end <- proc.time() - test_start #approx 8 mins
+
+#join hmi data to Forest_sel_meta
+
+Forest_sel_meta <- dplyr::left_join(x = Forest_sel_meta, y = Forest_sel_hmi, by = c('Hmi_cellID' = 'CellID', 'Hmi_yr' = 'Hmi_yr'))
+
+#check number of locations with NA
+sum(is.na(Forest_sel_meta$Hmi_value)) #1744
+
+#get coordinates of locations with NA
+Forest_hmi_missing <- Forest_sel_meta[which(is.na(Forest_sel_meta$Hmi_value)), c('PlotID', 'Hmi_yr', 'X_laea', 'Y_laea')]
+
+#fill gaps
+Forest_hmi_missing <- fill_hmi_gap(x = Forest_hmi_missing, hmi_stack = hmi_stack_proj, loc_id_col = 'PlotID', rad_meters = (res(hmi_stack_proj)[1] + 1))
+
+#check NA
+sum(is.na(Forest_hmi_missing$Hmi_value)) #198
+
+#exclude NAs
+Forest_hmi_missing <- Forest_hmi_missing[!is.na(Forest_hmi_missing$Hmi_value), ]
+
+#FROM LINE 366
+
 
 
