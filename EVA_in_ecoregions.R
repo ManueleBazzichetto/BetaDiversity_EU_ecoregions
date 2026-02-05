@@ -1479,7 +1479,7 @@ mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', 
 
 Forest_meta <- EVA_meta[which(EVA_meta$Eunis_lev1 == 'T'), ]
 
-#check ecoregions including grasslands
+#check ecoregions including forests
 unique(Forest_meta$ECO_NAME) #53
 
 #drop obervations with Sampl_period not included between 1980 and 2022

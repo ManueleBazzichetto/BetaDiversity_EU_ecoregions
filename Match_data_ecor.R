@@ -2477,8 +2477,146 @@ save(EVA_duply, file = '/Temporary_proj_run_GDM/EVA_duplicates.RData')
 
 #use grass_col_to_use because columns to select in Forest_meta are the same
 
+all(env_var_nm %in% colnames(Forest_sel_meta)) #T
+
 #drop NAs for environmental drivers
 sapply(Forest_sel_meta[env_var_nm], function(cl) sum(is.na(cl)))
 
-#check plot size!!!!
+forest_loc_to_drop <- complete.cases(Forest_sel_meta[env_var_nm])
+
+sum(!forest_loc_to_drop) #1375 (out of 111815)
+
+Forest_sel_meta <- Forest_sel_meta[forest_loc_to_drop, ]
+
+#check abundance of observations for the different ecoregions
+table(Forest_sel_meta$ECO_NAME)
+table(Forest_sel_meta$ECO_NAME, Forest_sel_meta$Period) #only Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests has less than 1k obs
+
+#check habitat type
+unique(Forest_sel_meta$Eunis_lev1) #'T'
+
+#check NAs in Sampl_year and Period
+sum(is.na(Forest_sel_meta$Sampl_year)) #0
+sum(is.na(Forest_sel_meta$Period)) #0
+
+#check plot size
+sum(is.na(Forest_sel_meta$Releve_area_m2)) #0
+range(Forest_sel_meta$Releve_area_m2) #1 1000
+table(Forest_sel_meta$Releve_area_m2)
+
+#drop observations associated with Releve_area_m2 < 50 m2
+sum(Forest_sel_meta$Releve_area_m2 < 50) #10201
+
+Forest_sel_meta <- Forest_sel_meta[Forest_sel_meta$Releve_area_m2 >= 50, ] #100239
+
+#check abundance of observations for the different ecoregions (per period)
+table(Forest_sel_meta$ECO_NAME, Forest_sel_meta$Period) #only Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests has less than 1k obs
+
+#drop observations for Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests
+Forest_sel_meta <- Forest_sel_meta[Forest_sel_meta$ECO_NAME != 'Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests', ] #98064
+
+#check differences in ecoregions between forests and grasslands
+setdiff(unique(Forest_sel_meta$ECO_NAME), unique(Grass_sel_meta$ECO_NAME)) #Dinaric_Mountains_mixed_forests (and TyrrAdriaticSclerophyllous which was kept in Grass_sel_meta but not matched)
+setdiff(unique(Grass_sel_meta$ECO_NAME), unique(Forest_sel_meta$ECO_NAME)) #5 more
+
+for_sel_econm <- unique(Forest_sel_meta$ECO_NAME)
+
+for_sel_econm <- setNames(for_sel_econm, nm = c('WesEu_bf', 'Alps_cmf', 'Pan_mf', 'EuAtl_mf', 'Sar_mf', 'CenEu_mf', 'Carp_mf',
+                                                'ItaScl_sdf', 'DinMon_mf', 'TyrAdr_smf'))
+
+#check
+all(for_sel_econm %in% unique(Forest_sel_meta$ECO_NAME)) #T
+
+#order for_sel_econm alphabetically
+for_sel_econm <- sort(for_sel_econm)
+
+#select columns for matching and add Period_bin column 
+For_sel_ecor <- lapply(for_sel_econm, function(eco_nm) {
+  
+  #select grass_col_to_use
+  dtf <- Forest_sel_meta[Forest_sel_meta$ECO_NAME == eco_nm, grass_col_to_use]
+  
+  #add Period_bin col
+  prd_tr <- table(dtf[['Period']])
+  prd_tr <- names(prd_tr[which.min(prd_tr)])
+  
+  dtf$Period_bin <- ifelse(dtf$Period == prd_tr, 1, 0)
+  
+  return(dtf)
+  
+  })
+
+
+#check
+lapply(For_sel_ecor, function(i) table(i[['Period_bin']]))
+
+#check correlation between topographic variables before running the statistical matching
+
+#roughness and slope are super correlated - removing slope fixes the problem
+lapply(For_sel_ecor, function(i) {
+  
+  require(car)
+  
+  dtf <- i[c('Period_bin', 'Elevation', 'Roughness', 'Slope')]
+  
+  vif_vals <- car::vif(lm(formula(dtf), data = dtf))
+  
+  return(vif_vals)
+  
+})
+
+#the formula for matchit will always be the same, so it's worth creating an object for it
+formula_for_matchit <- as.formula("Period_bin ~ Elevation + Roughness")
+
+
+# ------  1. Alps_conifer_and_mixed_forests ------
+
+table(For_sel_ecor$Alps_cmf$Period)
+table(For_sel_ecor$Alps_cmf$Period_bin)
+
+#------check initial imbalance
+
+Alps_cmf_init_for <- matchit(formula_for_matchit, data = For_sel_ecor$Alps_cmf, method = NULL, distance = 'glm')
+
+summary(Alps_cmf_init_for)
+plot(summary(Alps_cmf_init_for))
+plot(Alps_cmf_init_for, type = 'density')
+
+#------nearest neighbor
+
+#--propensity score
+
+#logit
+Alps_cmf_pscore1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Alps_cmf, method = 'nearest', distance = 'glm')
+
+Alps_cmf_pscore1_for
+summary(Alps_cmf_pscore1_for, un = FALSE) #this prevents comparison pre-matching to be printed
+summary(Alps_cmf_pscore1_for, un = FALSE, interactions = T)
+plot(Alps_cmf_pscore1_for, type = 'jitter', interactive = F)
+plot(Alps_cmf_pscore1_for, type = 'density', interactive = F)
+plot(summary(Alps_cmf_pscore1_for))
+plot(summary(Alps_cmf_pscore1_for, interactions = T))
+plot(summary(Alps_cmf_pscore1_for, interactions = T, un = F))
+
+#order + ratio -> this increases precision at the expenses of balance
+Alps_cmf_pscore1_ord1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Alps_cmf, method = 'nearest',
+                                           distance = 'glm', m.order = 'closest', ratio = 2) #2 control units matched to 1 tr
+
+
+summary(Alps_cmf_pscore1_ord1_ratio1_for, un = F, interactions = T)
+plot(Alps_cmf_pscore1_ord1_ratio1_for, type = 'jitter', interactive = F)
+plot(Alps_cmf_pscore1_ord1_ratio1_for, type = 'density', interactive = F)
+plot(summary(Alps_cmf_pscore1_ord1_ratio1_for, un = F))
+plot(summary(Alps_cmf_pscore1_ord1_ratio1_for, interactions = T, un = F))
+
+
+
+
+
+
+
+
+
+
+
 
