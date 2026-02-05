@@ -702,7 +702,24 @@ sum(is.na(Forest_hmi_missing$Hmi_value)) #198
 #exclude NAs
 Forest_hmi_missing <- Forest_hmi_missing[!is.na(Forest_hmi_missing$Hmi_value), ]
 
-#FROM LINE 366
+#fill in hmi values in Forest_sel_meta
 
+for(i in Forest_hmi_missing$PlotID) {
+  
+  Forest_sel_meta[Forest_sel_meta$PlotID == i, 'Hmi_value'] <- Forest_hmi_missing[Forest_hmi_missing$PlotID == i, 'Hmi_value']
+  
+}
+
+rm(i)
+
+#check NAs
+sum(is.na(Forest_sel_meta$Hmi_value)) #198
+
+rm(Forest_hmi_cellID, Forest_sel_hmi, test_start, test_end, Forest_hmi_missing)
+
+#-----save Forest_sel_meta
+
+#save Forest_sel_meta - note that this object still contains NAs for the environmental drivers
+save(Forest_sel_meta, file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Forest_selection_meta.RData')
 
 
