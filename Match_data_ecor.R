@@ -3121,3 +3121,238 @@ plot(EuAtl_mf_genetic1_ratio1_for, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_genetic1_ratio1_for, un = F))
 plot(summary(EuAtl_mf_genetic1_ratio1_for, interactions = T, un = F))
 
+
+# ------ 6. Italian_sclerophyllous_and_semi_deciduous_forests - PScore ------
+
+#balanced sample size between periods - don't test ratio = 2
+
+table(For_sel_ecor$ItaScl_sdf$Period)
+table(For_sel_ecor$ItaScl_sdf$Period_bin)
+
+#------check initial imbalance
+
+ItaScl_sdf_init_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = NULL, distance = 'glm')
+
+summary(ItaScl_sdf_init_for)
+plot(summary(ItaScl_sdf_init_for))
+plot(ItaScl_sdf_init_for, type = 'density')
+
+#------nearest neighbor
+
+#--propensity score
+
+#logit
+ItaScl_sdf_pscore1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest', distance = 'glm')
+
+summary(ItaScl_sdf_pscore1_for, un = FALSE) #this prevents comparison pre-matching to be printed
+summary(ItaScl_sdf_pscore1_for, un = FALSE, interactions = T)
+plot(ItaScl_sdf_pscore1_for, type = 'jitter', interactive = F)
+plot(ItaScl_sdf_pscore1_for, type = 'density', interactive = F)
+plot(summary(ItaScl_sdf_pscore1_for))
+plot(summary(ItaScl_sdf_pscore1_for, interactions = T))
+plot(summary(ItaScl_sdf_pscore1_for, interactions = T, un = F))
+
+#order
+ItaScl_sdf_pscore1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest',
+                                      distance = 'glm', m.order = 'closest')
+
+summary(ItaScl_sdf_pscore1_ord1_for, un = F, interactions = T)
+plot(ItaScl_sdf_pscore1_ord1_for, type = 'jitter', interactive = F)
+plot(ItaScl_sdf_pscore1_ord1_for, type = 'density', interactive = F)
+plot(summary(ItaScl_sdf_pscore1_ord1_for, un = F))
+plot(summary(ItaScl_sdf_pscore1_ord1_for, interactions = T, un = F))
+
+#using caliper on roughness and prop score
+ItaScl_sdf_pscore1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest',
+                                          distance = 'glm', m.order = 'closest',
+                                          std.caliper = TRUE, caliper = c(2, Roughness = 2),
+                                          link = "linear.logit")
+
+summary(ItaScl_sdf_pscore1_ord1_cal1_for, un = F, interactions = T) #72 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(ItaScl_sdf_pscore1_ord1_cal1_for, interactions = T, un = F))
+
+#--Mahalanobis
+
+ItaScl_sdf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest', distance = 'mahalanobis')
+
+summary(ItaScl_sdf_mahala1_for)
+plot(ItaScl_sdf_mahala1_for, type = 'density', interactive = F)
+plot(summary(ItaScl_sdf_mahala1_for, un = F))
+plot(summary(ItaScl_sdf_mahala1_for, interactions = T, un = F))
+
+#order
+ItaScl_sdf_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest',
+                                      distance = 'mahalanobis', m.order = 'closest')
+
+summary(ItaScl_sdf_mahala1_ord1_for, un = F, interactions = T)
+plot(ItaScl_sdf_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(ItaScl_sdf_mahala1_ord1_for, un = F))
+plot(summary(ItaScl_sdf_mahala1_ord1_for, interactions = T, un = F))
+
+#using caliper on roughness
+ItaScl_sdf_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest',
+                                          distance = 'mahalanobis', m.order = 'closest', std.caliper = TRUE,
+                                          caliper = c(Roughness = 1.9))
+
+summary(ItaScl_sdf_mahala1_ord1_cal1_for, un = F, interactions = T) #38 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(ItaScl_sdf_mahala1_ord1_cal1_for, interactions = T, un = F))
+
+#--robust Mahalanobis
+
+ItaScl_sdf_rob_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf,
+                                     method = 'nearest', distance = 'robust_mahalanobis')
+
+summary(ItaScl_sdf_rob_mahala1_for)
+plot(ItaScl_sdf_rob_mahala1_for, type = 'density', interactive = F)
+plot(summary(ItaScl_sdf_rob_mahala1_for, un = F))
+plot(summary(ItaScl_sdf_rob_mahala1_for, interactions = T, un = F))
+
+#order
+ItaScl_sdf_rob_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest',
+                                          distance = 'robust_mahalanobis', m.order = 'closest')
+
+summary(ItaScl_sdf_rob_mahala1_ord1_for, un = F, interactions = T)
+plot(ItaScl_sdf_rob_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(ItaScl_sdf_rob_mahala1_ord1_for, un = F))
+plot(summary(ItaScl_sdf_rob_mahala1_ord1_for, interactions = T, un = F))
+
+#using caliper on roughness
+ItaScl_sdf_rob_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf, method = 'nearest',
+                                              distance = 'robust_mahalanobis', m.order = 'closest', std.caliper = TRUE,
+                                              caliper = c(Roughness = 2))
+
+summary(ItaScl_sdf_rob_mahala1_ord1_cal1_for, un = F, interactions = T) #55 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(ItaScl_sdf_rob_mahala1_ord1_cal1_for, interactions = T, un = F))
+
+#------genetic matching
+
+#using GMD without prop.score - note that distance is set to mahalanobis so that prop score is not estimated - see examples method_genetic() 
+set.seed(forest_seeds[['ItaScl_sdf']])
+ItaScl_sdf_genetic1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf,
+                                  method = 'genetic', pop.size = 100, distance = 'mahalanobis')
+
+summary(ItaScl_sdf_genetic1_for)
+plot(ItaScl_sdf_genetic1_for, type = 'density', interactive = F)
+plot(summary(ItaScl_sdf_genetic1_for, un = F))
+plot(summary(ItaScl_sdf_genetic1_for, interactions = T, un = F))
+
+#using caliper on roughness
+set.seed(forest_seeds[['ItaScl_sdf']])
+ItaScl_sdf_genetic1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$ItaScl_sdf,
+                                      method = 'genetic', pop.size = 100, distance = 'mahalanobis', std.caliper = TRUE,
+                                      caliper = c(Roughness = 2))
+
+summary(ItaScl_sdf_genetic1_cal1_for, un = F, interactions = T) #39 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(ItaScl_sdf_genetic1_cal1_for, interactions = T, un = F))
+
+#--check matching performance
+
+#all methods with caliper
+ItaScl_for_perf <- do.call(rbind, lapply(list(PScore = ItaScl_sdf_pscore1_ord1_cal1_for,
+                                             Mah = ItaScl_sdf_mahala1_ord1_cal1_for,
+                                             RMah = ItaScl_sdf_rob_mahala1_ord1_cal1_for,
+                                             Genetic = ItaScl_sdf_genetic1_cal1_for), check_match_performance))
+
+ItaScl_for_perf #PScore
+
+# ------ 7. Pannonian_mixed_forests - GENETIC ------
+
+#Sample size period 2 is slightly lower than (sample size period 1) * 2 - I'm not testing ratio = 2 for consistency with what done above
+#if larger sample size is not at least twice than lower sample size, ratio = 2 is not tested
+
+table(For_sel_ecor$Pan_mf$Period)
+table(For_sel_ecor$Pan_mf$Period_bin)
+
+#------check initial imbalance
+
+Pan_mf_init_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = NULL, distance = 'glm')
+
+summary(Pan_mf_init_for)
+plot(summary(Pan_mf_init_for))
+plot(Pan_mf_init_for, type = 'density')
+
+#------nearest neighbor
+
+#--propensity score
+
+#logit
+Pan_mf_pscore1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest', distance = 'glm')
+
+summary(Pan_mf_pscore1_for, un = FALSE) #this prevents comparison pre-matching to be printed
+summary(Pan_mf_pscore1_for, un = FALSE, interactions = T)
+plot(Pan_mf_pscore1_for, type = 'jitter', interactive = F)
+plot(Pan_mf_pscore1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_pscore1_for))
+plot(summary(Pan_mf_pscore1_for, interactions = T))
+plot(summary(Pan_mf_pscore1_for, interactions = T, un = F))
+
+#order
+Pan_mf_pscore1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+                                       distance = 'glm', m.order = 'closest')
+
+summary(Pan_mf_pscore1_ord1_for, un = F, interactions = T)
+plot(Pan_mf_pscore1_ord1_for, type = 'jitter', interactive = F)
+plot(Pan_mf_pscore1_ord1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_pscore1_ord1_for, un = F))
+plot(summary(Pan_mf_pscore1_ord1_for, interactions = T, un = F))
+
+#--Mahalanobis
+
+Pan_mf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest', distance = 'mahalanobis')
+
+summary(Pan_mf_mahala1_for)
+plot(Pan_mf_mahala1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_mahala1_for, un = F))
+plot(summary(Pan_mf_mahala1_for, interactions = T, un = F))
+
+#order
+Pan_mf_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+                                       distance = 'mahalanobis', m.order = 'closest')
+
+summary(Pan_mf_mahala1_ord1_for, un = F, interactions = T)
+plot(Pan_mf_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_mahala1_ord1_for, un = F))
+plot(summary(Pan_mf_mahala1_ord1_for, interactions = T, un = F))
+
+#--robust Mahalanobis
+
+Pan_mf_rob_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
+                                      method = 'nearest', distance = 'robust_mahalanobis')
+
+summary(Pan_mf_rob_mahala1_for)
+plot(Pan_mf_rob_mahala1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_rob_mahala1_for, un = F))
+plot(summary(Pan_mf_rob_mahala1_for, interactions = T, un = F))
+
+#order
+Pan_mf_rob_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+                                           distance = 'robust_mahalanobis', m.order = 'closest')
+
+summary(Pan_mf_rob_mahala1_ord1_for, un = F, interactions = T)
+plot(Pan_mf_rob_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_rob_mahala1_ord1_for, un = F))
+plot(summary(Pan_mf_rob_mahala1_ord1_for, interactions = T, un = F))
+
+#------genetic matching
+
+#using GMD without prop.score - note that distance is set to mahalanobis so that prop score is not estimated - see examples method_genetic() 
+set.seed(forest_seeds[['Pan_mf']])
+Pan_mf_genetic1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
+                                   method = 'genetic', pop.size = 100, distance = 'mahalanobis')
+
+summary(Pan_mf_genetic1_for)
+plot(Pan_mf_genetic1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_genetic1_for, un = F))
+plot(summary(Pan_mf_genetic1_for, interactions = T, un = F))
+
+#--check matching performance
+
+#
+Pan_for_perf <- do.call(rbind, lapply(list(PScore = Pan_mf_pscore1_ord1_for,
+                                              Mah = Pan_mf_mahala1_ord1_for,
+                                              RMah = Pan_mf_rob_mahala1_ord1_for,
+                                              Genetic = Pan_mf_genetic1_for), check_match_performance))
+
+Pan_for_perf #Genetic
+
+
