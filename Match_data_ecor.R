@@ -2786,7 +2786,7 @@ Carp_for_perf <- do.call(rbind, lapply(list(PScore = Carp_mf_pscore1_ord1_for,
 Carp_for_perf #PScore and Mah provide very close performances - choosing Mah only becaause it has slightly lower Avg_smd
 
 
-# ------ 3. Central_European_mixed_forests - XXXX ------
+# ------ 3. Central_European_mixed_forests - PScore ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -2918,7 +2918,7 @@ CenEu_for_perf <- do.call(rbind, lapply(list(PScore = CenEu_mf_pscore1_ord1_cal1
                                             RMah = CenEu_mf_rob_mahala1_ord1_cal1_for,
                                             Genetic = CenEu_mf_genetic1_cal1_for), check_match_performance))
 
-CenEu_for_perf #Selecting Mah since it shows a good balance between performance and remaining sample size
+CenEu_for_perf #PScore and Mah provide very similar performances - selecting PScore only because it has a lower Max_smd
 
 # ------ 4. Dinaric_Mountains_mixed_forests - PScore ------
 
@@ -3020,7 +3020,7 @@ DinMon_for_perf <- do.call(rbind, lapply(list(PScore = DinMon_mf_pscore1_ord1_fo
 DinMon_for_perf #PScore
 
 
-# ------ 5. European_Atlantic_mixed_forests - XXXX ------
+# ------ 5. European_Atlantic_mixed_forests - GENETIC ------
 
 table(For_sel_ecor$EuAtl_mf$Period)
 table(For_sel_ecor$EuAtl_mf$Period_bin)
@@ -3060,6 +3060,15 @@ plot(EuAtl_mf_pscore1_ord1_ratio1_for, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_pscore1_ord1_ratio1_for, un = F))
 plot(summary(EuAtl_mf_pscore1_ord1_ratio1_for, interactions = T, un = F))
 
+#caliper on all covariates and prop score (for both SMD and Var Ratio)
+EuAtl_mf_pscore1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$EuAtl_mf, method = 'nearest',
+                                                 distance = 'glm', m.order = 'closest', ratio = 2, std.caliper = TRUE,
+                                                 link = 'linear.logit', caliper = c(2, Elevation = 2, Roughness = 2))
+
+summary(EuAtl_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T) #92 tr obs unmatched - Matched ESS < Matched
+plot(summary(EuAtl_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T))
+
+
 #--Mahalanobis
 
 EuAtl_mf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$EuAtl_mf, method = 'nearest', distance = 'mahalanobis')
@@ -3077,6 +3086,14 @@ summary(EuAtl_mf_mahala1_ord1_ratio1_for, un = T, interactions = T)
 plot(EuAtl_mf_mahala1_ord1_ratio1_for, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_mahala1_ord1_ratio1_for, un = F))
 plot(summary(EuAtl_mf_mahala1_ord1_ratio1_for, interactions = T, un = F))
+
+#caliper on all covariates (for both SMD and Var Ratio)
+EuAtl_mf_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$EuAtl_mf, method = 'nearest',
+                                                 distance = 'mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
+                                                 caliper = c(Elevation = 2, Roughness = 2))
+
+summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_for, un = FALSE, interactions = TRUE) #114 tr obs unmatched - Matched ESS < Matched
+plot(summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_for, un = FALSE, interactions = TRUE))
 
 #--robust Mahalanobis
 
@@ -3096,6 +3113,14 @@ summary(EuAtl_mf_rob_mahala1_ord1_ratio1_for, un = F, interactions = T)
 plot(EuAtl_mf_rob_mahala1_ord1_ratio1_for, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_for, un = F))
 plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_for, interactions = T, un = F))
+
+#caliper on all covariates (for both SMD and Var Ratio)
+EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$EuAtl_mf, method = 'nearest',
+                                                 distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
+                                                 caliper = c(Elevation = 2, Roughness = 2))
+
+summary(EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_for, un = FALSE, interactions = TRUE) #101 tr obs unmatched - Matched ESS < Matched
+plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_for, un = FALSE, interactions = TRUE))
 
 #------genetic matching
 
@@ -3120,6 +3145,22 @@ summary(EuAtl_mf_genetic1_ratio1_for, un = F, interactions = T)
 plot(EuAtl_mf_genetic1_ratio1_for, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_genetic1_ratio1_for, un = F))
 plot(summary(EuAtl_mf_genetic1_ratio1_for, interactions = T, un = F))
+
+#caliper on all covariates (for both SMD and Var Ratio)
+set.seed(forest_seeds[['EuAtl_mf']])
+EuAtl_mf_genetic1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$EuAtl_mf,
+                                        method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis',
+                                        std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
+
+summary(EuAtl_mf_genetic1_ratio1_cal1_for, un = FALSE, interactions = TRUE) #363 tr obs unmatched
+plot(summary(EuAtl_mf_genetic1_ratio1_cal1_for, un = FALSE, interactions = TRUE))
+
+#--check matching performance
+
+#
+EuAtl_for_perf <- check_match_performance(mobj = EuAtl_mf_genetic1_ratio1_cal1_for) 
+
+EuAtl_for_perf #Genetic is the only method providing balance and allowing to match each treatm obs to the same number of control obs (2)
 
 
 # ------ 6. Italian_sclerophyllous_and_semi_deciduous_forests - PScore ------
