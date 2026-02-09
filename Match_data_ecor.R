@@ -3020,7 +3020,7 @@ DinMon_for_perf <- do.call(rbind, lapply(list(PScore = DinMon_mf_pscore1_ord1_fo
 DinMon_for_perf #PScore
 
 
-# ------  5. European_Atlantic_mixed_forests - XXXX ------
+# ------ 5. European_Atlantic_mixed_forests - XXXX ------
 
 table(For_sel_ecor$EuAtl_mf$Period)
 table(For_sel_ecor$EuAtl_mf$Period_bin)
@@ -3354,5 +3354,252 @@ Pan_for_perf <- do.call(rbind, lapply(list(PScore = Pan_mf_pscore1_ord1_for,
                                               Genetic = Pan_mf_genetic1_for), check_match_performance))
 
 Pan_for_perf #Genetic
+
+# ------ 8. Sarmatic_mixed_forests - NO NEED OF MATCHING ------
+
+table(For_sel_ecor$Sar_mf$Period)
+table(For_sel_ecor$Sar_mf$Period_bin)
+
+#------check initial imbalance
+
+Sar_mf_init_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = NULL, distance = 'glm')
+
+#No need to match data for ratio 1:1
+summary(Sar_mf_init_for)
+plot(summary(Sar_mf_init_for))
+plot(summary(Sar_mf_init_for, interactions = T))
+plot(Sar_mf_init_for, type = 'density')
+
+# ------ 9. Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests - Mahalanobis ------
+
+#balanced sample size between periods - don't test ratio = 2
+
+table(For_sel_ecor$TyrAdr_smf$Period)
+table(For_sel_ecor$TyrAdr_smf$Period_bin)
+
+#------check initial imbalance
+
+TyrAdr_smf_init_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = NULL, distance = 'glm')
+
+summary(TyrAdr_smf_init_for)
+plot(summary(TyrAdr_smf_init_for))
+plot(TyrAdr_smf_init_for, type = 'density')
+
+#------nearest neighbor
+
+#--propensity score
+
+#logit
+TyrAdr_smf_pscore1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest', distance = 'glm')
+
+summary(TyrAdr_smf_pscore1_for, un = FALSE) #this prevents comparison pre-matching to be printed
+summary(TyrAdr_smf_pscore1_for, un = FALSE, interactions = T)
+plot(TyrAdr_smf_pscore1_for, type = 'jitter', interactive = F)
+plot(TyrAdr_smf_pscore1_for, type = 'density', interactive = F)
+plot(summary(TyrAdr_smf_pscore1_for))
+plot(summary(TyrAdr_smf_pscore1_for, interactions = T))
+plot(summary(TyrAdr_smf_pscore1_for, interactions = T, un = F))
+
+#order
+TyrAdr_smf_pscore1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest',
+                                      distance = 'glm', m.order = 'closest')
+
+summary(TyrAdr_smf_pscore1_ord1_for, un = F, interactions = T)
+plot(TyrAdr_smf_pscore1_ord1_for, type = 'jitter', interactive = F)
+plot(TyrAdr_smf_pscore1_ord1_for, type = 'density', interactive = F)
+plot(summary(TyrAdr_smf_pscore1_ord1_for, un = F))
+plot(summary(TyrAdr_smf_pscore1_ord1_for, interactions = T, un = F))
+
+#using caliper on roughness (for Var Ratio - see var ratio of roughness^2)
+TyrAdr_smf_pscore1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest',
+                                            distance = 'glm', m.order = 'closest',
+                                            std.caliper = TRUE, caliper = c(Roughness = 2))
+
+summary(TyrAdr_smf_pscore1_ord1_cal1_for, un = F, interactions = T) #22 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(TyrAdr_smf_pscore1_ord1_cal1_for, interactions = T, un = F))
+
+#--Mahalanobis
+
+TyrAdr_smf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest', distance = 'mahalanobis')
+
+summary(TyrAdr_smf_mahala1_for)
+plot(TyrAdr_smf_mahala1_for, type = 'density', interactive = F)
+plot(summary(TyrAdr_smf_mahala1_for, un = F))
+plot(summary(TyrAdr_smf_mahala1_for, interactions = T, un = F))
+
+#order
+TyrAdr_smf_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest',
+                                      distance = 'mahalanobis', m.order = 'closest')
+
+summary(TyrAdr_smf_mahala1_ord1_for, un = F, interactions = T)
+plot(TyrAdr_smf_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(TyrAdr_smf_mahala1_ord1_for, un = F))
+plot(summary(TyrAdr_smf_mahala1_ord1_for, interactions = T, un = F))
+
+#using caliper on roughness
+TyrAdr_smf_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest',
+                                            distance = 'mahalanobis', m.order = 'closest', std.caliper = TRUE,
+                                            caliper = c(Roughness = 2))
+
+summary(TyrAdr_smf_mahala1_ord1_cal1_for, un = F, interactions = T) #18 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(TyrAdr_smf_mahala1_ord1_cal1_for, interactions = T, un = F))
+
+#--robust Mahalanobis
+
+TyrAdr_smf_rob_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf,
+                                     method = 'nearest', distance = 'robust_mahalanobis')
+
+summary(TyrAdr_smf_rob_mahala1_for)
+plot(TyrAdr_smf_rob_mahala1_for, type = 'density', interactive = F)
+plot(summary(TyrAdr_smf_rob_mahala1_for, un = F))
+plot(summary(TyrAdr_smf_rob_mahala1_for, interactions = T, un = F))
+
+#order
+TyrAdr_smf_rob_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest',
+                                          distance = 'robust_mahalanobis', m.order = 'closest')
+
+summary(TyrAdr_smf_rob_mahala1_ord1_for, un = F, interactions = T)
+plot(TyrAdr_smf_rob_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(TyrAdr_smf_rob_mahala1_ord1_for, un = F))
+plot(summary(TyrAdr_smf_rob_mahala1_ord1_for, interactions = T, un = F))
+
+#using caliper on roughness
+TyrAdr_smf_rob_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest',
+                                                distance = 'robust_mahalanobis', m.order = 'closest', std.caliper = TRUE,
+                                                caliper = c(Roughness = 2))
+
+summary(TyrAdr_smf_rob_mahala1_ord1_cal1_for, un = F, interactions = T) #17 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(TyrAdr_smf_rob_mahala1_ord1_cal1_for, interactions = T, un = F))
+
+#------genetic matching
+
+#using GMD without prop.score - note that distance is set to mahalanobis so that prop score is not estimated - see examples method_genetic() 
+set.seed(forest_seeds[['TyrAdr_smf']])
+TyrAdr_smf_genetic1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf,
+                                  method = 'genetic', pop.size = 100, distance = 'mahalanobis')
+
+summary(TyrAdr_smf_genetic1_for, interactions = T, un = F)
+plot(TyrAdr_smf_genetic1_for, type = 'density', interactive = F)
+plot(summary(TyrAdr_smf_genetic1_for, un = F))
+plot(summary(TyrAdr_smf_genetic1_for, interactions = T, un = F))
+
+#using caliper on roughness
+set.seed(forest_seeds[['TyrAdr_smf']])
+TyrAdr_smf_genetic1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf,
+                                        method = 'genetic', pop.size = 100, distance = 'mahalanobis', std.caliper = TRUE,
+                                        caliper = c(Roughness = 2))
+
+summary(TyrAdr_smf_genetic1_cal1_for, un = F, interactions = T) #15 tr obs are not matched due to the caliper (besides control obs)
+plot(summary(TyrAdr_smf_genetic1_cal1_for, interactions = T, un = F))
+
+#--check matching performance
+
+#all methods with caliper
+TyrAdr_for_perf <- do.call(rbind, lapply(list(PScore = TyrAdr_smf_pscore1_ord1_cal1_for,
+                                              Mah = TyrAdr_smf_mahala1_ord1_cal1_for,
+                                              RMah = TyrAdr_smf_rob_mahala1_ord1_cal1_for,
+                                              Genetic = TyrAdr_smf_genetic1_cal1_for), check_match_performance))
+
+TyrAdr_for_perf #Mahalanobis
+
+# ------ 10. Western_European_broadleaf_forests - Mahalanobis ------
+
+#balanced sample size between periods - don't test ratio = 2
+
+table(For_sel_ecor$WesEu_bf$Period)
+table(For_sel_ecor$WesEu_bf$Period_bin)
+
+#------check initial imbalance
+
+WesEu_bf_init_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf, method = NULL, distance = 'glm')
+
+summary(WesEu_bf_init_for)
+plot(summary(WesEu_bf_init_for))
+plot(WesEu_bf_init_for, type = 'density')
+
+#------nearest neighbor
+
+#--propensity score
+
+#logit
+WesEu_bf_pscore1_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf, method = 'nearest', distance = 'glm')
+
+summary(WesEu_bf_pscore1_for, un = FALSE) #this prevents comparison pre-matching to be printed
+summary(WesEu_bf_pscore1_for, un = FALSE, interactions = T)
+plot(WesEu_bf_pscore1_for, type = 'jitter', interactive = F)
+plot(WesEu_bf_pscore1_for, type = 'density', interactive = F)
+plot(summary(WesEu_bf_pscore1_for))
+plot(summary(WesEu_bf_pscore1_for, interactions = T))
+plot(summary(WesEu_bf_pscore1_for, interactions = T, un = F))
+
+#order
+WesEu_bf_pscore1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf, method = 'nearest',
+                                       distance = 'glm', m.order = 'closest')
+
+summary(WesEu_bf_pscore1_ord1_for, un = F, interactions = T)
+plot(WesEu_bf_pscore1_ord1_for, type = 'jitter', interactive = F)
+plot(WesEu_bf_pscore1_ord1_for, type = 'density', interactive = F)
+plot(summary(WesEu_bf_pscore1_ord1_for, un = F))
+plot(summary(WesEu_bf_pscore1_ord1_for, interactions = T, un = F))
+
+#--Mahalanobis
+
+WesEu_bf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf, method = 'nearest', distance = 'mahalanobis')
+
+summary(WesEu_bf_mahala1_for)
+plot(WesEu_bf_mahala1_for, type = 'density', interactive = F)
+plot(summary(WesEu_bf_mahala1_for, un = F))
+plot(summary(WesEu_bf_mahala1_for, interactions = T, un = F))
+
+#order
+WesEu_bf_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf, method = 'nearest',
+                                       distance = 'mahalanobis', m.order = 'closest')
+
+summary(WesEu_bf_mahala1_ord1_for, un = F, interactions = T)
+plot(WesEu_bf_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(WesEu_bf_mahala1_ord1_for, un = F))
+plot(summary(WesEu_bf_mahala1_ord1_for, interactions = T, un = F))
+
+#--robust Mahalanobis
+
+WesEu_bf_rob_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf,
+                                      method = 'nearest', distance = 'robust_mahalanobis')
+
+summary(WesEu_bf_rob_mahala1_for)
+plot(WesEu_bf_rob_mahala1_for, type = 'density', interactive = F)
+plot(summary(WesEu_bf_rob_mahala1_for, un = F))
+plot(summary(WesEu_bf_rob_mahala1_for, interactions = T, un = F))
+
+#order
+WesEu_bf_rob_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf, method = 'nearest',
+                                           distance = 'robust_mahalanobis', m.order = 'closest')
+
+summary(WesEu_bf_rob_mahala1_ord1_for, un = F, interactions = T)
+plot(WesEu_bf_rob_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(WesEu_bf_rob_mahala1_ord1_for, un = F))
+plot(summary(WesEu_bf_rob_mahala1_ord1_for, interactions = T, un = F))
+
+#------genetic matching
+
+#using GMD without prop.score - note that distance is set to mahalanobis so that prop score is not estimated - see examples method_genetic() 
+set.seed(forest_seeds[['WesEu_bf']])
+WesEu_bf_genetic1_for <- matchit(formula_for_matchit, data = For_sel_ecor$WesEu_bf,
+                                   method = 'genetic', pop.size = 100, distance = 'mahalanobis')
+
+summary(WesEu_bf_genetic1_for, interactions = T, un = F)
+plot(WesEu_bf_genetic1_for, type = 'density', interactive = F)
+plot(summary(WesEu_bf_genetic1_for, un = F))
+plot(summary(WesEu_bf_genetic1_for, interactions = T, un = F))
+
+#--check matching performance
+
+#all methods with caliper
+WesEu_for_perf <- do.call(rbind, lapply(list(PScore = WesEu_bf_pscore1_ord1_for,
+                                              Mah = WesEu_bf_mahala1_ord1_for,
+                                              RMah = WesEu_bf_rob_mahala1_ord1_for,
+                                              Genetic = WesEu_bf_genetic1_for), check_match_performance))
+
+WesEu_for_perf #Mahalanobis
+
 
 
