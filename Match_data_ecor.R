@@ -3715,3 +3715,11 @@ all(sapply(Matched_datasets_forest, function(eco) all(sapply(eco, function(prd) 
 
 #save data to run GDM in another R project
 save(Matched_datasets_forest, file = '/Temporary_proj_run_GDM/Tmp_data_for_GDM_forest.RData')
+
+#save EVA_veg to run GDM in another R project.
+#Notice that EVA_veg was already saved above. However, reloading the obj saved above in the Rprj where I am currently running the GDMs
+#will overwrite the list of matched datasets for grasslands. !!!!Next time, save EVA_veg separately, so that I don't have to export it twice
+save(EVA_veg, file = '/Temporary_proj_run_GDM/EVA_veg_data.RData')
+
+
+
