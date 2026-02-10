@@ -2440,7 +2440,7 @@ Matched_datasets_grass <- list(Alps_cmf = Alps_cmf_genetic1_ratio1_cal1_gr,
 
 Matched_datasets_grass <- lapply(Matched_datasets_grass, function(mobj) {
   
-  #extract matched data - drop 'matchdata' class because this is obj type not allowed in gdm package
+  #extract matched data - drop 'matchdata' class because this obj type is not accepted by gdm package
   dtf <- as.data.frame(MatchIt::match_data(mobj))
   
   #check weights are all 1
@@ -3643,4 +3643,75 @@ WesEu_for_perf <- do.call(rbind, lapply(list(PScore = WesEu_bf_pscore1_ord1_for,
 WesEu_for_perf #Mahalanobis
 
 
+# ----
+# ----
 
+# ------ End of stat matching for forests ------
+
+#----extract matched datasets and prepare them for GDMs
+
+#Alps_conifer_and_mixed_forests: Alps_cmf_pscore1_ord1_ratio1_for
+#Carpathian_montane_forests: Carp_mf_mahala1_ord1_for
+#Central_European_mixed_forests: CenEu_mf_pscore1_ord1_cal1_for
+#Dinaric_Mountains_mixed_forests: DinMon_mf_pscore1_ord1_for
+#European_Atlantic_mixed_forests: EuAtl_mf_genetic1_ratio1_cal1_for
+#Italian_sclerophyllous_and_semi_deciduous_forests: ItaScl_sdf_pscore1_ord1_cal1_for
+#Pannonian_mixed_forests: Pan_mf_genetic1_for
+#Sarmatic_mixed_forests: MATCHING NOT NEEDED
+#Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests: TyrAdr_smf_mahala1_ord1_cal1_for
+#Western_European_broadleaf_forests: WesEu_bf_mahala1_ord1_for
+
+
+Matched_datasets_forest <- list(Alps_cmf_pscore1_ord1_ratio1_for,
+                                Carp_mf_mahala1_ord1_for,
+                                CenEu_mf_pscore1_ord1_cal1_for,
+                                DinMon_mf_pscore1_ord1_for,
+                                EuAtl_mf_genetic1_ratio1_cal1_for,
+                                ItaScl_sdf_pscore1_ord1_cal1_for,
+                                Pan_mf_genetic1_for,
+                                TyrAdr_smf_mahala1_ord1_cal1_for,
+                                WesEu_bf_mahala1_ord1_for)
+
+names(Matched_datasets_forest) <- names(for_sel_econm[-8]) 
+
+
+Matched_datasets_forest <- lapply(Matched_datasets_forest, function(mobj) {
+  
+  #extract matched data - drop 'matchdata' class because this obj type is not accepted by gdm package
+  dtf <- as.data.frame(MatchIt::match_data(mobj))
+  
+  #check weights are all 1
+  if(!all(dtf[['weights']] == 1)) stop('Not all weights are 1')
+  
+  #drop weights, subclass and distance columns
+  dtf <- dtf[setdiff(colnames(dtf), c('distance', 'weights', 'subclass'))]
+  
+  #split data frame in period 1 and 2
+  dtf_pr1 <- dtf[which(dtf[['Period']] == 'period1'), ]
+  
+  dtf_pr2 <- dtf[which(dtf[['Period']] == 'period2'), ]
+  
+  #res
+  res <- list(Period1 = dtf_pr1, Period2 =  dtf_pr2)
+  
+  return(res)
+  
+})
+
+#attach dataset for Sarmatic_mixed_forests, which did not need matching
+
+identical(colnames(For_sel_ecor$Sar_mf), colnames(Matched_datasets_forest$Alps_cmf$Period1)) #TRUE
+'Sar_mf' %in% names(Matched_datasets_forest)
+
+Matched_datasets_forest[['Sar_mf']] <- list(Period1 = For_sel_ecor$Sar_mf[which(For_sel_ecor$Sar_mf$Period == 'period1'), ],
+                                                            Period2 = For_sel_ecor$Sar_mf[which(For_sel_ecor$Sar_mf$Period == 'period2'), ])
+
+#re-order alphabetically
+Matched_datasets_forest <- Matched_datasets_forest[sort(names(Matched_datasets_forest))]
+
+#check all datasets have min sample size (1k observations per period)
+all(sapply(Matched_datasets_forest, function(eco) all(sapply(eco, function(prd) nrow(prd) >= 1000L))))
+
+
+#save data to run GDM in another R project
+save(Matched_datasets_forest, file = '/Temporary_proj_run_GDM/Tmp_data_for_GDM_forest.RData')
