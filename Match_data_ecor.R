@@ -3722,4 +3722,47 @@ save(Matched_datasets_forest, file = '/Temporary_proj_run_GDM/Tmp_data_for_GDM_f
 save(EVA_veg, file = '/Temporary_proj_run_GDM/EVA_veg_data.RData')
 
 
+#-------------------------------------------------create maps showing ecoregions selected for analyses
+
+library(paletteer)
+
+sel_ecor_analysis <- list(Grass = unique(Grass_sel_meta$ECO_NAME),
+                          Forest = unique(Forest_sel_meta$ECO_NAME))
+
+length(sel_ecor_analysis$Grass) #14 - drop Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests that did not meet min smp size requirement (for grass)
+
+sel_ecor_analysis$Grass <- sel_ecor_analysis$Grass[!sel_ecor_analysis$Grass %in% 'Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests'] 
+
+#drop "_" and add '-' in ecor names to match ECO_NAME in eu_ecoregions.proj
+sel_ecor_analysis$Grass <- gsub(pattern = '_', replacement = ' ', x = sel_ecor_analysis$Grass)
+sel_ecor_analysis$Forest <- gsub(pattern = '_', replacement = ' ', x = sel_ecor_analysis$Forest)
+
+sel_ecor_analysis$Grass[9] <- "Italian sclerophyllous and semi-deciduous forests"
+sel_ecor_analysis$Forest[c(8, 10)] <- c("Italian sclerophyllous and semi-deciduous forests", "Tyrrhenian-Adriatic sclerophyllous and mixed forests")
+
+#create palette for ecoregions
+sel_ecor_palette <- unique(unlist(sel_ecor_analysis)) 
+
+sel_ecor_palette <- setNames(as.character(paletteer::paletteer_d("ggsci::default_igv", n = length(sel_ecor_palette))),
+                             nm = sel_ecor_palette)
+
+all(names(sel_ecor_palette) %in% eu_ecoregions.proj$ECO_NAME) #TRUE
+
+#create bbox including all ecoregions (both grass and for)
+sel_ecor_bbox <- st_bbox(obj = eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% names(sel_ecor_palette), ])
+
+#not using the palette - I am simply coloring grass in lightgreen and forests in dark green
+
+#grass
+plot(st_geometry(st_crop(x = eu_ecoregions.proj, y = sel_ecor_bbox)))
+plot(st_geometry(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% sel_ecor_analysis$Grass, ]),
+     col = 'lightgreen', add = T)
+
+
+#forest
+plot(st_geometry(st_crop(x = eu_ecoregions.proj, y = sel_ecor_bbox)))
+plot(st_geometry(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% sel_ecor_analysis$Forest, ]),
+     col = 'darkgreen', add = T)
+
+
 
