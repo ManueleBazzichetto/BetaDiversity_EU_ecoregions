@@ -282,14 +282,13 @@ hab_key <- setNames(c('empty', 'surface_waters', 'unclassified', 'wetlands_mires
 all(unique(EVA_meta$Eunis_lev1) %in% names(hab_key)) #T
 all(names(hab_key) %in% unique(EVA_meta$Eunis_lev1)) #T
 
-##FROM HERE!!!!!!!!!!
-
 #--integrate Leblanc's classification based on the Large Language Model
 
 #import LLM-based classification
-
 #notice that this version is based on species' relative abundance
 LLM_classif <- fread(file = 'PlantBert_class/plantbert_habitat_predictions.csv', data.table = FALSE)
+
+str(LLM_classif)
 
 #check NA
 anyNA(LLM_classif)
@@ -299,15 +298,15 @@ sum(duplicated(LLM_classif$PlotObservationID))
 
 #modify columns - avoid white spaces and so on
 
-#replace all '-' by '_'
-colnames(LLM_classif) <- gsub(pattern = '-', replacement = '_', x = colnames(LLM_classif))
-
 #replace all white spaces by '_'
 colnames(LLM_classif) <- gsub(pattern = ' ', replacement = '_', x = colnames(LLM_classif))
 
+#replace all '-' by '_'
+colnames(LLM_classif) <- gsub(pattern = '-', replacement = '_', x = colnames(LLM_classif))
+
 #remove brackets
-colnames(LLM_classif) <- gsub(pattern = '(', replacement = '_', x = colnames(LLM_classif), fixed = T)
-colnames(LLM_classif) <- gsub(pattern = ')', replacement = '_', x = colnames(LLM_classif), fixed = T)
+colnames(LLM_classif) <- gsub(pattern = '(', replacement = '', x = colnames(LLM_classif), fixed = T)
+colnames(LLM_classif) <- gsub(pattern = ')', replacement = '', x = colnames(LLM_classif), fixed = T)
 
 #create a copy of the last field to only include the prediction accuracy
 LLM_classif$Accuracy_for_lev2 <- LLM_classif$Most_likely_EUNIS_level_2_habitat
@@ -316,28 +315,70 @@ LLM_classif$Accuracy_for_lev2 <- LLM_classif$Most_likely_EUNIS_level_2_habitat
 LLM_classif$Most_likely_EUNIS_level_2_habitat <- sub(pattern = "^([^ ]+).*", replacement = "\\1", x = LLM_classif$Most_likely_EUNIS_level_2_habitat)
 
 #only keep prediction accuracy in Accuracy_for_lev2
-LLM_classif$Accuracy_for_lev2 <- as.double(sub(pattern = ".*\\(([^%]+)%\\).*", replacement = "\\1", x = LLM_classif$Accuracy_lev_2))
+LLM_classif$Accuracy_for_lev2 <- as.double(sub(pattern = ".*\\(([^%]+)%\\).*", replacement = "\\1", x = LLM_classif$Accuracy_for_lev2))
 
 #get some stats on the prediction accuracy
-range(LLM_classif$Accuracy_for_lev2)
-tapply(X = LLM_classif$Accuracy_for_lev2, INDEX = LLM_classif$Most_likely_EUNIS_level_2_habitat, FUN = mean)
+range(LLM_classif$Accuracy_for_lev2) #5.01 - 100 (only keep observations associated with accuracy >= 75.00)
+sort(tapply(X = LLM_classif$Accuracy_for_lev2, INDEX = LLM_classif$Most_likely_EUNIS_level_2_habitat, FUN = mean))
 
-#extract first letter of lev-2 assignment
-unique(LLM_classif$Most_likely_EUNIS_level_2_habitat)
+#extract first letter of lev-2 assignment to get EUNIS lev-1 classification
+unique(LLM_classif$Most_likely_EUNIS_level_2_habitat) #there are no multiple assignments
+
+LLM_classif$LLM_Eunis_lev1 <- substr(LLM_classif$Most_likely_EUNIS_level_2_habitat, start = 1, stop = 1)
+
+#check that all EUNIS lev-1 classes are included in the Eunis_lev1 field in EVA_meta
+all(unique(LLM_classif$LLM_Eunis_lev1) %in% unique(EVA_meta$Eunis_lev1)) #TRUE
+
+#filter LLM_classif to only cosider observations for which class accuracy is >= 75.00
+nrow(LLM_classif[LLM_classif$Accuracy_for_lev2 >= 75.00, ]) #763,322
+
+#filter LLM_classif
+LLM_classif <- LLM_classif[LLM_classif$Accuracy_for_lev2 >= 75.00, ]
+
+#rename the Most_likely_EUNIS_level_2_habitat field
+colnames(LLM_classif)[6] <- 'LLM_lilely_Eunis_lev2'
+
+#also rename PlotObservationID column for consistency
+colnames(LLM_classif)[1] <- 'PlotID'
+
+#select only relevant columns
+LLM_classif <- LLM_classif[c('PlotID', 'LLM_Eunis_lev1', 'LLM_lilely_Eunis_lev2', 'Accuracy_for_lev2')]
 
 #join LLM-based classification to EVA_meta. Join also classification at lev-2
+#to_del <- dplyr::left_join(x = EVA_meta, y = LLM_classif, by = 'PlotID')
+#all(mapply(identical, x = to_del[1:(length(to_del) - 3)], y = EVA_meta)) #TRUE
+#rm(to_del)
 
+EVA_meta <- dplyr::left_join(x = EVA_meta, y = LLM_classif, by = 'PlotID')
+
+#rm LLM_classif to free space
+rm(LLM_classif)
 
 #check how many unclassified or empty assignments are gained
 anyNA(EVA_meta$Expert_system) #FALSE
 
-#ifelse(EVA_meta$Expert_system %in% c("X", "Y"), , EVA_meta$Expert_system)
+sum(ifelse(EVA_meta$Eunis_lev1 %in% c('X', 'Y') & !is.na(EVA_meta$LLM_Eunis_lev1), TRUE, FALSE)) #274,235
+sum(ifelse(EVA_meta$Eunis_lev1 %in% c('X') & !is.na(EVA_meta$LLM_Eunis_lev1), TRUE, FALSE)) #219,907
+sum(ifelse(EVA_meta$Eunis_lev1 %in% c('Y') & !is.na(EVA_meta$LLM_Eunis_lev1), TRUE, FALSE)) #54,328
 
+#create a new field combining ESy and LLM classification
+#priority is given to the ESy classification. Only plots belonging to 'X' (empty) or 'Y' (unclassified) classes are assigned LLM classes (if available)
 
+#check how many 'X' and 'Y' are in EVA_meta before filling gaps with LLM classif
+sum(EVA_meta$Eunis_lev1 %in% c('X', 'Y')) #821,088
+
+EVA_meta$ESy_plus_LLM_lev1 <- ifelse(EVA_meta$Eunis_lev1 %in% c("X", "Y") & !is.na(EVA_meta$LLM_Eunis_lev1), EVA_meta$LLM_Eunis_lev1, EVA_meta$Eunis_lev1)
+
+#check 
+sum(EVA_meta$ESy_plus_LLM_lev1 %in% c('X', 'Y')) #546,853 (821,088 - 274,235)
+anyNA(EVA_meta$ESy_plus_LLM_lev1) #FALSE
+unique(EVA_meta$ESy_plus_LLM_lev1)
+all(unique(EVA_meta$ESy_plus_LLM_lev1 %in% names(hab_key))) #TRUE
+min(EVA_meta[!EVA_meta$ESy_plus_LLM_lev1 %in% c('X', 'Y'), 'Accuracy_for_lev2'], na.rm = T) #75
 
 #--create field including verbose version of EUNIS lev-1
 
-EVA_meta$EunisVerbose_lev1 <- unname(hab_key[EVA_meta$Eunis_lev1])
+EVA_meta$EunisVerbose_lev1 <- unname(hab_key[EVA_meta$ESy_plus_LLM_lev1])
 
 #--exclude observations missing info on sampling year
 
@@ -347,7 +388,7 @@ anyNA(EVA_meta$Date_of_recording) #F
 
 unique(substr(x = EVA_meta$Date_of_recording, start = 7, stop = 10)) #contains ''
 
-sum(EVA_meta$Date_of_recording == '') #180108
+sum(EVA_meta$Date_of_recording == '') #137579
 
 unique(nchar(EVA_meta$Date_of_recording)) #10 0 7
 
@@ -361,7 +402,7 @@ EVA_meta$Date_of_recording[EVA_meta$Date_of_recording == ''] <- NA_character_
 
 EVA_meta$Date_of_recording[which(EVA_meta$Date_of_recording == '0:00:00')] <- NA_character_
 
-sum(is.na(EVA_meta$Date_of_recording)) #180204 (180108 + 96) [OK]
+sum(is.na(EVA_meta$Date_of_recording)) #137675 (137579 + 96) [OK]
 
 #remove NAs
 EVA_meta <- EVA_meta[!is.na(EVA_meta$Date_of_recording), ]
@@ -431,8 +472,8 @@ unique(EVA_meta$Cover_abundance_scale) #104
 #drop 'Presence/Absence', 'Presentie/Absentie', 'frequency %', if still present
 
 #Presence/Absence
-sum(EVA_meta$Cover_abundance_scale == "Presence/Absence") #319197
-unique(EVA_meta$Dataset[EVA_meta$Cover_abundance_scale == "Presence/Absence"]) #43 datasets, including Denmark Naturdata
+sum(EVA_meta$Cover_abundance_scale == "Presence/Absence") #319196
+unique(EVA_meta$Dataset[EVA_meta$Cover_abundance_scale == "Presence/Absence"]) #42 datasets, including Denmark Naturdata
 table(EVA_meta$Dataset[EVA_meta$Cover_abundance_scale == "Presence/Absence"]) #majority of plots are from Denmark Naturdata (278726)
 
 #Presentie/Absentie
@@ -448,7 +489,7 @@ c('Presentie/Absentie', 'frequency %') %in% unique(EVA_meta$Cover_abundance_scal
 EVA_meta <- EVA_meta[EVA_meta$Cover_abundance_scale != "Presence/Absence", ]
 
 #check number of plots at this stage
-nrow(EVA_meta) #1472627
+nrow(EVA_meta) #1,445,940
 
 #-- 2 - identify truly resampled plots (ReSurvey)
 
@@ -458,7 +499,7 @@ nrow(EVA_meta) #1472627
 
 #check values of the RS_CODE field
 unique(EVA_meta$RS_CODE) #empty or a string with dataset code
-length(which(EVA_meta$RS_CODE == '')) #1305098
+length(which(EVA_meta$RS_CODE == '')) #1,278,411
 
 #assign 'NOT_RS' to all observations with an empty string
 #grep(pattern = '^NOT_RS$', x = EVA_meta$RS_CODE, value = T) #character(0)
@@ -471,14 +512,14 @@ EVA_meta$RS_CODE[EVA_meta$RS_CODE == ''] <- 'NOT_RS'
 
 #first check values of ReSurvey_plot_Y_N
 unique(EVA_meta$ReSurvey_plot_Y_N) #'Y' 'N' ''
-length(EVA_meta$ReSurvey_plot_Y_N[EVA_meta$ReSurvey_plot_Y_N == '']) #1049969
-length(EVA_meta$ReSurvey_plot_Y_N[EVA_meta$ReSurvey_plot_Y_N == 'N']) #266443
+length(EVA_meta$ReSurvey_plot_Y_N[EVA_meta$ReSurvey_plot_Y_N == '']) #1,023,282
+length(EVA_meta$ReSurvey_plot_Y_N[EVA_meta$ReSurvey_plot_Y_N == 'N']) #266,443
 
 #empty values in ReSurvey_plot_Y_N means 'N' (following Ilona here), as these observations are core EVA data
 EVA_meta$ReSurvey_plot_Y_N[EVA_meta$ReSurvey_plot_Y_N == ''] <- 'N'
 
 #check
-#length(EVA_meta$ReSurvey_plot_Y_N[EVA_meta$ReSurvey_plot_Y_N == 'N']) #1316412
+#length(EVA_meta$ReSurvey_plot_Y_N[EVA_meta$ReSurvey_plot_Y_N == 'N']) #1,289,725
 
 table(with(EVA_meta, ifelse(RS_CODE != '' & ReSurvey_plot_Y_N == 'Y', TRUE, FALSE)))
 
@@ -547,7 +588,7 @@ EVA_meta[EVA_meta$RS_CODE == 'DE_0037_88', 'RS_PROJTYP'] <- 'permanent'
 #to do so, use the RS_PROJTYP column. In short, drop observations associated with 'permanent (man)'
 
 #check unique values in RS_PROJTYP
-unique(EVA_meta$RS_PROJTYP) #some typo to correct
+unique(EVA_meta$RS_PROJTYP) #some typos to correct
 
 #208 cases of Resampling -> resampling
 EVA_meta$RS_PROJTYP[EVA_meta$RS_PROJTYP == 'Resampling'] <- 'resampling'
@@ -556,7 +597,7 @@ EVA_meta$RS_PROJTYP[EVA_meta$RS_PROJTYP == 'Resampling'] <- 'resampling'
 EVA_meta$RS_PROJTYP[EVA_meta$RS_PROJTYP == 'Permanent (man)'] <- 'permanent (man)'
 
 #check frequency of cases
-table(EVA_meta$RS_PROJTYP) #44433 cases of 'permanent (man)'
+table(EVA_meta$RS_PROJTYP) #44,433 cases of 'permanent (man)'
 
 #to keep control observations, combine RS_PROJTYP and Manipulate_y_n
 #permanent (man) with 'N' in Manipulate_y_n are control plots
@@ -585,14 +626,15 @@ EVA_meta <- EVA_meta[!EVA_meta$PlotID %in% man_plot_id, ]
 #check
 #all(!(EVA_meta$PlotID %in% man_plot_id)) #TRUE
 
-#nrow(EVA_meta) #1440708
+#nrow(EVA_meta) #1,414,021
 
 #--account for location uncertainty (?)
 
-#this column is very hard to use because precision of coordinates and relocation accuracy have been mixed up
+#this column cannot be used to estimate location uncertainty
+#because coordinates' precision and relocation accuracy have been mixed up
 
 anyNA(EVA_meta$Location_uncertainty_m) #T
-sum(is.na(EVA_meta$Location_uncertainty_m)) #146459
+sum(is.na(EVA_meta$Location_uncertainty_m)) #146,459
 
 #check if this is available only for RS data -> nope, this is available for EVA plots too
 unique(EVA_meta[EVA_meta$ReSurvey_plot_Y_N == 'N', 'Location_uncertainty_m'])
@@ -631,7 +673,7 @@ sum(st_coordinates(EVA_meta.sp)[, 2] < bbox_yminmax[1] | st_coordinates(EVA_meta
 
 #check number of points included
 sum((st_coordinates(EVA_meta.sp)[, 1] >= bbox_xminmax[1] & st_coordinates(EVA_meta.sp)[, 1] <= bbox_xminmax[2]) &
-      (st_coordinates(EVA_meta.sp)[, 2] >= bbox_yminmax[1] & st_coordinates(EVA_meta.sp)[, 1] <= bbox_yminmax[2])) #1440671
+      (st_coordinates(EVA_meta.sp)[, 2] >= bbox_yminmax[1] & st_coordinates(EVA_meta.sp)[, 1] <= bbox_yminmax[2])) #1,413,985
 
 bbox_xy <- c(setNames(bbox_xminmax, c('xmin', 'xmax')), setNames(bbox_yminmax, c('ymin', 'ymax')))
 
@@ -707,7 +749,7 @@ mapview(st_as_sf(diss_eu_land.proj))
 
 st_write(obj = diss_eu_land.proj, dsn = '/MOTIVATE/GDM_EuropeanEcoregions/GSHHG/diss_eu_land/diss_eu_land_proj.shp')
 
-#import the land polygon with a 100-m buffer area. This was computed in QGIS (it took 5 mins and 38 secs)
+#import the land polygon with a 100-m buffer area. This was computed in QGIS (it took approx. 6 mins)
 
 eu_land_proj_100m_buf <- st_read(dsn = "/MOTIVATE/GDM_EuropeanEcoregions/GSHHG/diss_eu_land/eu_land_proj_buffer100m.shp")
 
@@ -722,7 +764,7 @@ tmp_inters <- st_intersects(x = EVA_meta.sp, y = eu_land_proj_100m_buf, sparse =
 
 tmp_inters <- apply(tmp_inters, 1, any)
 
-length(which(!tmp_inters)) #20917 points falling off the coast + 100 m buffer
+length(which(!tmp_inters)) #20,226 points falling off the coast + 100 m buffer
 
 #extract points falling off the coast
 tmp_off_the_coast <- EVA_meta.sp[which(!tmp_inters), ]
@@ -745,7 +787,7 @@ EVA_meta.sp <- st_join(x = EVA_meta.sp, y = eu_ecoregions.proj[c(2, 4, 5)], left
 
 anyNA(EVA_meta.sp$ECO_NAME) #FALSE
 
-unique(EVA_meta.sp$ECO_NAME) #73 ecoregions
+unique(EVA_meta.sp$ECO_NAME) #72 ecoregions
 
 #remove '-' from ECO_NAME and replace white spaces by '_'
 
@@ -755,7 +797,7 @@ EVA_meta.sp$ECO_NAME <- gsub(pattern = '-', replacement = ' ', x = EVA_meta.sp$E
 
 EVA_meta.sp$ECO_NAME <- gsub(pattern = ' ', replacement = '_', x = EVA_meta.sp$ECO_NAME)
 
-length(unique(EVA_meta.sp$ECO_NAME)) #still 73
+length(unique(EVA_meta.sp$ECO_NAME)) #still 72
 
 #--filter out from EVA_meta plots not included in EVA_meta.sp
 
@@ -790,7 +832,7 @@ identical(which(EVA_meta$ReSurvey_plot_Y_N == 'Y'), which(EVA_meta$Truly_RS)) #T
 #PlotID of RS time-series
 RS_PlotID <- EVA_meta$PlotID[EVA_meta$Truly_RS]
 
-length(RS_PlotID) #124308
+length(RS_PlotID) #124,308
 
 #Isolate RS from EVA
 RS_meta <- EVA_meta[EVA_meta$PlotID %in% RS_PlotID, ]
@@ -819,14 +861,14 @@ sapply(RS_meta[c("RS_CODE", "ReSurvey_site", "ReSurvey_plot")], class) #all chr
 RS_meta$ID_RS_ts <- with(RS_meta, paste(RS_CODE, ReSurvey_site, ReSurvey_plot, sep = '_'))
 
 #check how many t-s are present
-length(unique(RS_meta$ID_RS_ts)) #38659
+length(unique(RS_meta$ID_RS_ts)) #38,659
 
 #create column to identify RS observations (it should mean every RS sampling unit, a time-series is made of N sampling units)
 #(following header's description here - see word file)
 
 #first check ReSurvey_observation
 class(RS_meta$ReSurvey_observation) #chr
-sum(duplicated(RS_meta$ReSurvey_observation)) #18814
+sum(duplicated(RS_meta$ReSurvey_observation)) #18,814
 anyNA(RS_meta$ReSurvey_observation) #F
 sum(RS_meta$ReSurvey_observation == '') #0
 
@@ -835,7 +877,7 @@ RS_meta$ID_RS_observ <- with(RS_meta, paste(RS_CODE, ReSurvey_site, ReSurvey_plo
 
 #check duplicates
 sum(duplicated(RS_meta$ID_RS_observ)) #2695 (?)
-length(unique(RS_meta$ID_RS_observ)) #121613
+length(unique(RS_meta$ID_RS_observ)) #121,613
 
 unique(RS_meta$RS_CODE[duplicated(RS_meta$ID_RS_observ)])
 
@@ -845,6 +887,7 @@ RS_meta[RS_meta$RS_CODE == 'CZ_0019_025' & duplicated(RS_meta$ID_RS_observ), ]
 RS_meta[RS_meta$RS_CODE == 'HU_0002' & duplicated(RS_meta$ID_RS_observ), ]
 RS_meta[RS_meta$RS_CODE == 'RS_0001' & duplicated(RS_meta$ID_RS_observ), ]
 
+#notice that Turboveg automatically assigns Jan 1st of the year when the Date of recording was originally provided incomplete (e.g., the sampling year is missing)
 RS_meta[RS_meta$ID_RS_observ == 'SI_0004_Trans1_Trans1_1_Trans1_1_2021', ] #these have same coordinates, but were sampled on (1st of) Jan. and 12th August
 RS_meta[RS_meta$ID_RS_observ == 'SI_0004_Trans1_Trans1_2_Trans1_2_2021', ] #same as above
 RS_meta[RS_meta$ID_RS_observ == 'CZ_0019_025_KRAL_SNEZNIK_KRAL_SNEZNIK01_KRAL_SNEZNIK01_2019', ] #different coordinates, but same Date_of_recording
@@ -882,13 +925,13 @@ RS_meta[RS_meta$ID_RS_ts == names(id_ts_start)[3], c('PlotID', 'Sampl_year')]
 
 #check cases with more than a single starting plot
 head(which(lengths(id_ts_start) > 1))
-sum(lengths(id_ts_start) > 1) #430 (out of 38659)
+sum(lengths(id_ts_start) > 1) #430 (out of 38,659)
 
 #is it possible that RS_meta includes starting plots of time series that haven't been resurveyed yet
 id_ts_start[42]
 RS_meta[RS_meta$ID_RS_ts == names(id_ts_start)[42], c('PlotID', 'Sampl_year')]
 #check Date_of_recording, which could be different from Sampl_year
-RS_meta[RS_meta$PlotID %in% c(391, 415), ] #these plots were indeed surveyed on different days
+RS_meta[RS_meta$PlotID %in% c(391, 415), ] #these plots were indeed surveyed on different days -> see comment above on plots sampled on Jan 1st
 
 #another example
 id_ts_start[2770]
@@ -897,7 +940,7 @@ RS_meta[RS_meta$ID_RS_ts == names(id_ts_start)[2770], c('PlotID', 'Sampl_year')]
 RS_meta[RS_meta$PlotID %in% c(6647, 6648, 758100, 758101, 758102, 758103), ] #these have different dates of recording, except for a couple of cases
 
 #check how many plots I would recover
-length(unlist(id_ts_start)) #41229 (out of 124308)
+length(unlist(id_ts_start)) #41,229 (out of 124,308)
 
 #sanity check
 #sum(duplicated(unlist(id_ts_start))) #0
@@ -920,12 +963,16 @@ id_ts_to_drop <- RS_meta$PlotID[!RS_meta$PlotID %in% id_ts_start]
 
 EVA_meta <- EVA_meta[!EVA_meta$PlotID %in% id_ts_to_drop, ]
 
-nrow(EVA_meta) #1336712
+nrow(EVA_meta) #1,310,716
 
 #keep only ids contained in id_ts_to_drop for RS_meta
 RS_meta <- RS_meta[RS_meta$PlotID %in% id_ts_to_drop, ]
 
-nrow(RS_meta) #83079
+nrow(RS_meta) #83,079
+
+#check
+all(!id_ts_start %in% RS_meta$PlotID) #TRUE
+all(id_ts_start %in% EVA_meta$PlotID) #TRUE
 
 #--save EVA_meta, RS_meta and RS_meta.sp
 
@@ -937,7 +984,6 @@ save(EVA_meta, RS_meta, EVA_meta.sp, file = '/MOTIVATE/GDM_EuropeanEcoregions/tm
 #--delete objects that are not used eventually
 
 
-
 #--check on (spatial) duplicates
 
 #this check will be on two types of duplicates:
@@ -945,7 +991,7 @@ save(EVA_meta, RS_meta, EVA_meta.sp, file = '/MOTIVATE/GDM_EuropeanEcoregions/tm
 #1) true duplicates: plots having exactly the same coordinates, Sampl_year, taxonomic composition and species' relative abundances
 #2) duplicates: plots having exactly the same coordinates (but not necessarily Sampl_year, tax comp and species' rel abund)
 
-#true duplicates are assessed on EVA + RS as a whole because the idea is to keep only a single observation per group of true duplicates
+#true duplicates are identified in EVA & RS as a whole because the idea is to keep only a single observation per group of true duplicates
 #duplicates are identified within each period (before / after 2000) and within each ecoregion separately because the idea is to fit
 #period- and ecoregion-specific models - duplicates can still be used if they belong to different periods
 
@@ -980,11 +1026,11 @@ RS_meta.sp$Sampl_year <- RS_meta$Sampl_year
 #create Period column
 EVA_meta.sp$Period <- ifelse(as.integer(EVA_meta.sp$Sampl_year) < 2000L, 'period1', 'period2')
 
-table(EVA_meta.sp$Period) #period1: 794354; period2: 542358 
+table(EVA_meta.sp$Period) #period1: 774,057; period2: 536,659 
 
 RS_meta.sp$Period <- ifelse(as.integer(RS_meta.sp$Sampl_year) < 2000L, 'period1', 'period2')
 
-table(RS_meta.sp$Period) #period1: 11710; period2: 71369
+table(RS_meta.sp$Period) #period1: 11,710; period2: 71,369
 
 #-- 1 - check on true duplicates
 
@@ -1014,7 +1060,7 @@ EVA_meta.sp[which(!EVA_meta.sp$PlotID %in% unique(EVA_veg$PlotID)), ]
 1 %in% EVA_veg$PlotID #FALSE
 
 #and vice-versa -> although this is possible since I removed quite a few plots from EVA_/RS_meta.sp that should still be present in EVA_veg
-sum(!unique(EVA_veg$PlotID) %in% EVA_meta.sp$PlotID) #1071455
+sum(!unique(EVA_veg$PlotID) %in% EVA_meta.sp$PlotID) #1097451
 sum(!unique(EVA_veg$PlotID) %in% RS_meta.sp$PlotID) #2325435
 
 #save PlotID that are present in EVA_meta.sp and RS_meta.sp but are not present in EVA_veg
@@ -1039,8 +1085,8 @@ intersect(x = EVA_meta.sp$PlotID, y = RS_meta.sp$PlotID) #integer(0)
 EVA_veg <- EVA_veg[EVA_veg$PlotID %in% c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID), ]
 
 #fine, EVA_veg has the same plots that are included in EVA_meta.sp and RS_meta.sp
-length(unique(EVA_veg$PlotID)) #1418680
-length(EVA_meta.sp$PlotID) + length(RS_meta.sp$PlotID) #1418680
+length(unique(EVA_veg$PlotID)) #1,392,684
+length(EVA_meta.sp$PlotID) + length(RS_meta.sp$PlotID) #1,392,684
 setdiff(x = unique(EVA_veg$PlotID), y = c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID)) #0
 setdiff(x = c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID), y = unique(EVA_veg$PlotID)) #0
 
@@ -1051,7 +1097,7 @@ setdiff(x = c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID), y = unique(EVA_veg$PlotID)
 setDT(EVA_veg)
 
 #count number of plots having multiple records for the same species
-nrow(EVA_veg[, if(any(duplicated(Species_name))) 1L else 0L, by = PlotID][V1 == 1L]) #219273 plots with at least one duplicated species
+nrow(EVA_veg[, if(any(duplicated(Species_name))) 1L else 0L, by = PlotID][V1 == 1L]) #217,510 plots with at least one duplicated species
 
 #get plot ids with duplicated species names (and different Layer values)
 EVA_veg[, .(IDs = paste(which(duplicated(Species_name)), collapse = '-'), DiffLyr = if(uniqueN(Layer) == 1) 0L else 1L ), by = PlotID][IDs != '' & DiffLyr != 0L, 'PlotID']
@@ -1098,7 +1144,7 @@ EVA_RS_true_duply <- st_equals(EVA_RS_sp)
 #find unique groups of duplicated points
 
 #count number of groups of plots (at least two duplicates)
-sum(lengths(EVA_RS_true_duply) > 1) #831573 - note that this number counts multiple time the same combination of duplicates
+sum(lengths(EVA_RS_true_duply) > 1) #810141 - note that this number counts multiple time the same combination of duplicates
 
 #first subset EVA_RS_true_duply to only keep groups of plots (at least two duplicates)
 EVA_RS_true_duply <- EVA_RS_true_duply[lengths(EVA_RS_true_duply) > 1]
@@ -1120,10 +1166,10 @@ EVA_RS_true_duply <- lapply(EVA_RS_true_duply, function(grp) {
 EVA_RS_true_duply <- unlist(EVA_RS_true_duply)
 
 #check how many duplicates
-sum(duplicated(EVA_RS_true_duply)) #677955
+sum(duplicated(EVA_RS_true_duply)) #659,008
 
 #keep only unique sets
-EVA_RS_true_duply <- unique(EVA_RS_true_duply) #153618
+EVA_RS_true_duply <- unique(EVA_RS_true_duply) #151,133
 
 #transform EVA_RS_true_duply to a list of groups of plot ids (coerced to integer)
 EVA_RS_true_duply <- lapply(EVA_RS_true_duply, function(grp) {
@@ -1142,16 +1188,16 @@ EVA_RS_true_duply <- lapply(EVA_RS_true_duply, function(grp) {
 sum(lengths(EVA_RS_true_duply) < 2) #0 (nope)
 
 #number of plots
-sum(lengths(EVA_RS_true_duply)) #831573 (this is the number of plots having at least a duplicate)
+sum(lengths(EVA_RS_true_duply)) #810,141 (this is the number of plots having at least a duplicate)
 
 #now exclude from EVA_RS_true_duply the plot ids that are unique in terms of Sampl_year
 #true duplicates are indeed associated with the same Sampl_year
 
 #select only relevant columns in EVA_RS_sp and drop geometry
-EVA_RS_sp_sub <- EVA_RS_sp[, c('PlotID', 'Sampl_year'), drop = T]
+EVA_RS_sp <- EVA_RS_sp[, c('PlotID', 'Sampl_year'), drop = T] #here replaced EVA_RS_sp_sub by EVA_RS_sp (creating EVA_RS_sp_sub was pointless)
 
 #drop PlotID not included in EVA_RS_true_duply
-EVA_RS_sp_sub <- EVA_RS_sp_sub[EVA_RS_sp_sub$PlotID %in% unlist(EVA_RS_true_duply), ]
+EVA_RS_sp <- EVA_RS_sp[EVA_RS_sp$PlotID %in% unlist(EVA_RS_true_duply), ]
 
 #create table with PlotID and corresponding group id - an id which groups plot ids that are potential true duplicates (and surely duplicates)
 
@@ -1163,9 +1209,9 @@ EVA_RS_true_duply <- data.frame(PlotID = unlist(EVA_RS_true_duply), GrpID = rep(
 
 #join Sampl_year column to EVA_RS_true_duply by plot
 class(EVA_RS_true_duply$PlotID) #int
-class(EVA_RS_sp_sub$PlotID) #int
+class(EVA_RS_sp$PlotID) #int
 
-EVA_RS_true_duply <- dplyr::left_join(x = EVA_RS_true_duply, y = EVA_RS_sp_sub, by = 'PlotID')
+EVA_RS_true_duply <- dplyr::left_join(x = EVA_RS_true_duply, y = EVA_RS_sp, by = 'PlotID')
 
 #coerce EVA_RS_true_duply to a data.table to speed up data manipulation
 setDT(EVA_RS_true_duply)
@@ -1174,7 +1220,7 @@ setDT(EVA_RS_true_duply)
 grp_with_duply <- EVA_RS_true_duply[, .(HasDupYear = if(any(duplicated(Sampl_year))) TRUE else FALSE), by = .(GrpID)][which(HasDupYear), GrpID]
 
 #check how many groups have at least a duplicate for year
-length(grp_with_duply) #103279 (out of 153618 groups)
+length(grp_with_duply) #99,454 (out of 151,133 groups)
 
 #check
 EVA_RS_true_duply[GrpID %in% grp_with_duply[10]]
@@ -1198,7 +1244,7 @@ EVA_veg_more1sp <- EVA_veg_sub[, .N, by = PlotID]
 
 EVA_veg_more1sp <- EVA_veg_more1sp[N > 1, PlotID]
 
-length(EVA_veg_more1sp) #658869
+length(EVA_veg_more1sp) #634,121
 
 #subset both EVA_veg_sub and EVA_RS_true_duply to keep plots in EVA_veg_more1sp
 EVA_veg_sub <- EVA_veg_sub[PlotID %in% EVA_veg_more1sp]
@@ -1215,26 +1261,26 @@ EVA_RS_true_duply <- EVA_veg_sub[EVA_RS_true_duply, on = 'PlotID']
 
 #find true duplicates
 #the idea is to create a new (list)column, PlotList, that includes the plot ids belonging to groups defined by unique combo of GrpID, Sampl_year, PlotComp
-#any time two plots share the same GrpID, Sampl_year and have the same PlotComp, the correspdoning element in PlotList will have length > 1 
+#any time two plots share the same GrpID, Sampl_year and have the same PlotComp, the corresponding element in PlotList will have length > 1 
 EVA_RS_true_duply <- EVA_RS_true_duply[, .(PlotList = list(PlotID)), by = .(GrpID, Sampl_year, PlotComp)]
 
 #check how many cases of true duplicates
-sum(lengths(EVA_RS_true_duply$PlotList) > 1) #8214
+sum(lengths(EVA_RS_true_duply$PlotList) > 1) #8,024
 
 #subset EVA_RS_true_duply to keep only elements with true duplicates
 EVA_RS_true_duply <- EVA_RS_true_duply[lengths(EVA_RS_true_duply[, PlotList]) > 1]
 
 #number of true duplicates
-length(unlist(EVA_RS_true_duply$PlotList)) #17280
+length(unlist(EVA_RS_true_duply$PlotList)) #16,893
 
 #check distribution of sizes of groups of true duplicates
 range(lengths(EVA_RS_true_duply$PlotList)) #2 70
-table(lengths(EVA_RS_true_duply$PlotList))
+table(lengths(EVA_RS_true_duply$PlotList)) #groups are mostly constituted by 2 plots
 
 #one group has 70 true duplicates (!) in 2005
-EVA_RS_true_duply[lengths(EVA_RS_true_duply$PlotList) == 70] #Grp_82139
+EVA_RS_true_duply[lengths(EVA_RS_true_duply$PlotList) == 70] #Grp_83539
 
-#notice that there might be multiple groups of true duplicates for the same year in Grp_82139
+#notice that there might be multiple groups of true duplicates for the same year in Grp_83539
 EVA_meta[EVA_meta$PlotID %in% unlist(EVA_RS_true_duply[lengths(EVA_RS_true_duply$PlotList) == 70, PlotList]), ] #looks like these are all in EVA
 
 #get id of plots to remove to exclude true duplicates
@@ -1244,7 +1290,7 @@ plot_ids_trued <- EVA_RS_true_duply[, PlotList]
 
 #keep only first plot ids of each group
 #there should remain sum(lengths(plot_ids_trued) - 1)
-sum(lengths(plot_ids_trued)) #17280
+sum(lengths(plot_ids_trued)) #16,893
 
 plot_ids_drop <- lapply(plot_ids_trued, function(id) {
   
@@ -1255,14 +1301,14 @@ plot_ids_drop <- lapply(plot_ids_trued, function(id) {
 })
 
 #check [RIGHT]
-sum(lengths(plot_ids_trued) - 1) #9066
-length(unlist(plot_ids_drop)) #9066
+sum(lengths(plot_ids_trued) - 1) #8,869
+length(unlist(plot_ids_drop)) #8,869
 
 #unlist plot_ids_drop
 plot_ids_drop <- unlist(plot_ids_drop)
 
 #delete objects to free memory
-#rm(EVA_RS_sp, EVA_veg_sub, EVA_RS_sp_sub, EVA_veg_more1sp, grp_with_duply, EVA_RS_true_duply)
+#rm(EVA_RS_sp, EVA_veg_sub, EVA_veg_more1sp, grp_with_duply, EVA_RS_true_duply)
 
 
 #-- 2 - check on duplicates
@@ -1271,8 +1317,8 @@ plot_ids_drop <- unlist(plot_ids_drop)
 class(EVA_meta.sp); class(RS_meta.sp) #sf data.frame
 
 #check how many true duplicates are contained in the two data.frames
-sum(EVA_meta.sp$PlotID %in% plot_ids_drop) #8859 - nearly the total number of plots
-sum(RS_meta.sp$PlotID %in% plot_ids_drop) #207
+sum(EVA_meta.sp$PlotID %in% plot_ids_drop) #8,658 - nearly the total number of plots
+sum(RS_meta.sp$PlotID %in% plot_ids_drop) #211
 
 #drop the plots
 EVA_meta.sp <- EVA_meta.sp[!EVA_meta.sp$PlotID %in% plot_ids_drop, ]
@@ -1464,8 +1510,8 @@ RS_duply <- lapply(unique(RS_meta.sp$ECO_NAME), function(nm) {
 
 ##now keep only plot ids in EVA_meta.sp and RS_meta.sp from EVA_meta and RS_meta
 class(EVA_meta); class(RS_meta) #data.frame data.frame
-nrow(EVA_meta); nrow(RS_meta) #1.336.712 83.079
-nrow(EVA_meta.sp); nrow(RS_meta.sp) #1.327.471 82.143
+nrow(EVA_meta); nrow(RS_meta) #1,310,716 83,079
+nrow(EVA_meta.sp); nrow(RS_meta.sp) #1,301,676 82,139
 
 EVA_meta <- EVA_meta[EVA_meta$PlotID %in% EVA_meta.sp$PlotID, ]
 
@@ -1477,12 +1523,12 @@ RS_meta <- RS_meta[RS_meta$PlotID %in% RS_meta.sp$PlotID, ]
 
 #check how many observations miss data on plot size
 class(EVA_meta$Releve_area_m2) #num
-length(unique(EVA_meta$Releve_area_m2)) #1218 different plot sizes (!)
+length(unique(EVA_meta$Releve_area_m2)) #1,218 different plot sizes (!)
 range(unique(EVA_meta$Releve_area_m2), na.rm = T) #0.01 9999.99
 range(unique(RS_meta$Releve_area_m2), na.rm = T) #0.01 3000
 
 #check NAs
-sum(is.na(EVA_meta$Releve_area_m2)) #311.439 plots missing plot size
+sum(is.na(EVA_meta$Releve_area_m2)) #308,214 plots missing plot size
 sum(is.na(RS_meta$Releve_area_m2)) #1879
 
 #drop observations with missing data for plot size
@@ -1492,24 +1538,26 @@ RS_meta <- RS_meta[!is.na(RS_meta$Releve_area_m2), ]
 #-habitat classification
 
 #check NAs, unclassified habitats (marked as Y), empty fields (marked as X)
-sum(is.na(EVA_meta$Eunis_lev1)) #0
-sum(is.na(RS_meta$Eunis_lev1)) #0
-unique(EVA_meta$Eunis_lev1)
-unique(RS_meta$Eunis_lev1)
+sum(is.na(EVA_meta$ESy_plus_LLM_lev1)) #0
+sum(is.na(RS_meta$ESy_plus_LLM_lev1)) #0
+unique(EVA_meta$ESy_plus_LLM_lev1)
+unique(RS_meta$ESy_plus_LLM_lev1)
 
 #drop unclassified and empty fields for Eunis_lev1
-length(which(EVA_meta$Eunis_lev1 %in% c("Y", "X"))) #192.881
-length(which(RS_meta$Eunis_lev1 %in% c("Y", "X"))) #6091
+length(which(EVA_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"))) #37,209
+length(which(RS_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"))) #1018
 
-EVA_meta <- EVA_meta[!EVA_meta$Eunis_lev1 %in% c("Y", "X"), ]
-RS_meta <- RS_meta[!RS_meta$Eunis_lev1 %in% c("Y", "X"), ]
+EVA_meta <- EVA_meta[!EVA_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"), ]
+RS_meta <- RS_meta[!RS_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"), ]
 
-sort(table(EVA_meta$Eunis_lev1)) #R (grasslands) and T (forests) are the most abundant
-sum(EVA_meta$Eunis_lev1 %in% c('R', 'T')) #516.172 relevés classified as either grassland or forest
+sort(table(EVA_meta$ESy_plus_LLM_lev1)) #R (grasslands) and T (forests) are the most abundant
+sum(EVA_meta$ESy_plus_LLM_lev1 %in% c('R', 'T')) #575,270 relevés classified as either grassland or forest
+#[LLM classification made us gain 73,501 plots - for For and Gr]
+#sum(EVA_meta$Eunis_lev1 %in% c('R', 'T')) #501,769
 
-sort(table(RS_meta$Eunis_lev1)) #R and T are still the most abundant
-sum(RS_meta$Eunis_lev1 %in% c('R', 'T')) #58.485
-
+sort(table(RS_meta$ESy_plus_LLM_lev1)) #R and T are still the most abundant
+sum(RS_meta$ESy_plus_LLM_lev1 %in% c('R', 'T')) #62,119
+#sum(RS_meta$Eunis_lev1 %in% c('R', 'T')) #58,481 (3,638 plots gained thanks to LLM classification - for For and Gr)
 
 #-period
 
@@ -1519,16 +1567,18 @@ sum(RS_meta$Eunis_lev1 %in% c('R', 'T')) #58.485
 
 #I'm not excluding these data at this stage, though. This can be done afterwards.
 
-sum(as.integer(EVA_meta$Sampl_year) < 1980L | as.integer(EVA_meta$Sampl_year) > 2022L) #197.358
+sum(as.integer(EVA_meta$Sampl_year) < 1980L | as.integer(EVA_meta$Sampl_year) > 2022L) #210,909
 
 
 #--match PlotID between EVA_meta, RS_meta and their corresponding .sp versions
 
+#difference due to plots dropped in case of missing plot size or unclassified (or empty) hab assignment in EVA_meta and RS_meta
+
 length(setdiff(EVA_meta$PlotID, EVA_meta.sp$PlotID)) #0
-length(setdiff(EVA_meta.sp$PlotID, EVA_meta$PlotID)) #504.320
+length(setdiff(EVA_meta.sp$PlotID, EVA_meta$PlotID)) #345,423
 
 length(setdiff(RS_meta$PlotID, RS_meta.sp$PlotID)) #0
-length(setdiff(RS_meta.sp$PlotID, RS_meta$PlotID)) #7970
+length(setdiff(RS_meta.sp$PlotID, RS_meta$PlotID)) #2,897
 
 EVA_meta.sp <- EVA_meta.sp[EVA_meta.sp$PlotID %in% EVA_meta$PlotID, ]
 
@@ -1536,16 +1586,14 @@ RS_meta.sp <- RS_meta.sp[RS_meta.sp$PlotID %in% RS_meta$PlotID, ]
 
 
 
-
-
-
 #---------------subset EVA_meta to keep only grasslands
 
+Grass_meta <- EVA_meta[which(EVA_meta$ESy_plus_LLM_lev1 == 'R'), ]
 
-Grass_meta <- EVA_meta[which(EVA_meta$Eunis_lev1 == 'R'), ]
+nrow(Grass_meta) #361,367
 
 #check ecoregions including grasslands
-unique(Grass_meta$ECO_NAME) #60
+unique(Grass_meta$ECO_NAME) #64
 
 #drop obervations with Sampl_period not included between 1980 and 2022
 Grass_meta <- Grass_meta[as.integer(Grass_meta$Sampl_year) <= 2022 & as.integer(Grass_meta$Sampl_year) >= 1980, ]
@@ -1570,7 +1618,7 @@ Grass_eco_nm <- unique(Grass_meta$ECO_NAME)
 Grass_eco_prd$ECO_NAME <- as.character(Grass_eco_prd$ECO_NAME)
 Grass_eco_prd$Period <- as.character(Grass_eco_prd$Period)
 
-#14 ecoregions
+#15 ecoregions
 Grass_eco_minN <- names(which(sapply(Grass_eco_nm, function(nm) all(Grass_eco_prd[Grass_eco_prd$ECO_NAME == nm, 'Freq'] >= 1000))))
 
 Grass_eco_prd[Grass_eco_prd$ECO_NAME %in% Grass_eco_minN, ]
@@ -1581,10 +1629,12 @@ mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', 
 
 #---------------subset EVA_meta to keep only forests
 
-Forest_meta <- EVA_meta[which(EVA_meta$Eunis_lev1 == 'T'), ]
+Forest_meta <- EVA_meta[which(EVA_meta$ESy_plus_LLM_lev1 == 'T'), ]
+
+nrow(Forest_meta) #213,903
 
 #check ecoregions including forests
-unique(Forest_meta$ECO_NAME) #53
+unique(Forest_meta$ECO_NAME) #55
 
 #drop obervations with Sampl_period not included between 1980 and 2022
 Forest_meta <- Forest_meta[as.integer(Forest_meta$Sampl_year) >= 1980 & as.integer(Forest_meta$Sampl_year) <= 2022, ]
@@ -1609,7 +1659,7 @@ Forest_eco_nm <- unique(Forest_meta$ECO_NAME)
 Forest_eco_prd$ECO_NAME <- as.character(Forest_eco_prd$ECO_NAME)
 Forest_eco_prd$Period <- as.character(Forest_eco_prd$Period)
 
-#11
+#13
 Forest_eco_minN <- names(which(sapply(Forest_eco_nm, function(nm) all(Forest_eco_prd[Forest_eco_prd == nm, 'Freq'] >= 1000))))
 
 Forest_eco_prd[Forest_eco_prd$ECO_NAME %in% Forest_eco_minN, ]
@@ -1619,59 +1669,8 @@ mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', 
 
 
 
-
-
 #-- check species with 0 cover in EVA_veg
 
 
-#-----to delete
 
-##FROM HERE!!!!!!!
-
-
-#compute Bray-Curtis in groups of duplicates - identify plots below a given threshold of Bray-Curtis and drop others
-#the idea is to apply a random spatial shift to plots that are similar in terms of B-C
-
-#this allows avoiding resampling, which may complicate things for matching
-
-#https://stackoverflow.com/questions/10225098/understanding-exactly-when-a-data-table-is-a-reference-to-vs-a-copy-of-another
-
-#example on a given ecoregion and period: Appenine_deciduous_montane_forests - Period 1
-ex_admf <- EVA_duply$Appenine_deciduous_montane_forests$period1
-
-#get plot ids
-ex_admf <- as.integer(unlist(lapply(ex_admf, function(i) unlist(strsplit(i, split = '-')))))
-
-#compute dissimilarity matrix
-
-#FROM HERE!!!!!!!!!!!!!
-
-#subset EVA_veg
-#eva_veg_admf <- EVA_veg[PlotID %in% ex_admf]
-
-#dcast to pivot_wide
-#dcast(eva_veg_admf, PlotID ~ Species_name, value.var = 'Cover_perc', fill = 0)
-
-#compute B-C for all plots and then subset the matrix to check mean dissimilarity within groups
-
-#the idea is that building a unique dissimilarity matrix for all plots in a group is faster than creating a group specific dissimilarity matrix
-
-
-#below, an example on a couple of plots
-
-#re-order EVA_veg by PlotID (and within PlotID by Cover_perc)
-EVA_veg[order(PlotID, Cover_perc)]
-
-#filter plot ids
-EVA_veg[PlotID %in% c(30014, 30015)]
-
-#from long to wide
-#tidyr::pivot_wider(data = EVA_veg[PlotID %in% c(30014, 30015)], names_from = 'Species_name', values_from = 'Cover_perc', values_fill = 0)
-#dcast(DT.m1, family_id + age_mother ~ child, value.var = "dob")
-dcast(EVA_veg[PlotID %in% c(30014, 30015)], PlotID ~ Species_name, value.var = 'Cover_perc', fill = 0)
-
-#drop PlotID (?)
-
-#compute B-C
-as.matrix(vegan::vegdist(dcast(EVA_veg[PlotID %in% c(30014, 30015)], PlotID ~ Species_name, value.var = 'Cover_perc', fill = 0), 'bray'))
 
