@@ -1,5 +1,5 @@
-#This code processes the shapefiles of ecoregions and European land borders, and EVA data to get a preliminary list of candidate ecoregions
-#to be analyzed for MOTIVATE
+#This code processes the shapefiles of ecoregions and European land borders, as well as EVA data, to obtain the sets of
+#grassland and forest ecoregions for the analyses
 
 #spatial analysis
 library(sf)
@@ -16,12 +16,13 @@ library(future.apply)
 
 #notes
 
-#IDEA FOR ANALYSIS: an idea could be to follow a latitudinal gradient of forests or grasslands (or both)
-#the ecoregions remaining after dropping plots with missing covariates or inadequate temporal resolution
-#span a quite wide longitudinal and latitudinal (if including something from Baltic) gradient
-#analyses focusing on the two decades and across latitude could evidence change in the effect of drivers
-#on taxonomic dissimilarity over time (within ecoregions)
-#and, at the same time, change in the effect of drivers across latitude.
+#The idea is to select ecoregions that cover wide longitudinal and latitudinal gradients
+#the focus is on forests and grasslands, which will be analysed separately
+
+#analyses will focus on two time periods: 1980-1999 and 2000-2022
+#period-specific analyses should highlight the potential temporal change
+#in the relative importance of the drivers of taxonomic dissimilarity
+#and, at the same time, whether the change relates to the lon/lat gradient.
 
 #CRS used for spatial analysis:
 #ETRS89-extended / LAEA Europe (https://spatialreference.org/ref/epsg/3035/)
@@ -106,7 +107,7 @@ EVA_meta <- fread(file = 'C://MOTIVATE/EVA_dataset/200_Motivate20250415_notJUICE
 
 #remove columns that won't be used
 
-EVA_meta <- EVA_meta[c(1:10, 14:18, 21, 23:42)]
+EVA_meta <- EVA_meta[c(1:10, 14:18, 21, 23:42, 44, 45)]
 
 #use only PlotID as the plot identifier column -> I'm keeping PlotID as integer as it is much faster to use integer in logical comparisons (than, eg, character)
 identical(EVA_meta$PlotObservationID, EVA_meta$PlotID) #F
@@ -133,6 +134,54 @@ nrow(EVA_meta) - sum(complete.cases(EVA_meta[c('Longitude', 'Latitude')])) #1825
 #check if missing long and lat occur in the same rows
 identical(which(is.na(EVA_meta$Longitude)), which(is.na(EVA_meta$Latitude))) #TRUE
 
+#before dropping observations with missing coordinates, assign Lon_prec and Lat_prec
+#to Longitude and Latitude where precision coordinates are available
+
+#check Lon_prec and Lat_prec are available for the same PlotID
+identical(which(is.na(EVA_meta$Lon_prec)), which(is.na(EVA_meta$Lat_prec))) #TRUE
+
+#check for which datasets the prec coords are available
+table(EVA_meta[!is.na(EVA_meta$Lon_prec), 'Dataset']) #CH_SwissNFI DE_0037_GermanyResurvey
+
+#assign prec coordinates to these datasets
+EVA_meta$Longitude[EVA_meta$Dataset == 'CH_SwissNFI'] <- EVA_meta$Lon_prec[EVA_meta$Dataset == 'CH_SwissNFI'] #cor is 0.9999927
+EVA_meta$Latitude[EVA_meta$Dataset == 'CH_SwissNFI'] <- EVA_meta$Lat_prec[EVA_meta$Dataset == 'CH_SwissNFI'] #cor is 0.999983
+
+#same for DE_0037_GermanyResurvey
+EVA_meta$Longitude[EVA_meta$Dataset == 'DE_0037_GermanyResurvey'] <- EVA_meta$Lon_prec[EVA_meta$Dataset == 'DE_0037_GermanyResurvey'] #cor is 0.9999982
+EVA_meta$Latitude[EVA_meta$Dataset == 'DE_0037_GermanyResurvey'] <- EVA_meta$Lat_prec[EVA_meta$Dataset == 'DE_0037_GermanyResurvey'] #cor is 0.9999987
+
+#check
+#identical(EVA_meta$Longitude[EVA_meta$Dataset == 'DE_0037_GermanyResurvey'], EVA_meta$Lon_prec[EVA_meta$Dataset == 'DE_0037_GermanyResurvey']) #TRUE
+#identical(EVA_meta$Latitude[EVA_meta$Dataset == 'DE_0037_GermanyResurvey'], EVA_meta$Lat_prec[EVA_meta$Dataset == 'DE_0037_GermanyResurvey']) #TRUE
+
+#I can drop Lon_prec and Lat_prec because I won't use these fields anymore
+EVA_meta$Lon_prec <- NULL
+EVA_meta$Lat_prec <- NULL
+
+#drop 'SIVIM' datasets in Spain because the coordinates of these datasets represent grid centroids
+#rather than actual plot coordinates
+
+length(grep(pattern = 'SIVIM', x = EVA_meta$Dataset, value = T)) #70,777 (!)
+unique(grep(pattern = 'SIVIM', x = EVA_meta$Dataset, value = T)) #there are many SIVIM datasets
+
+#see an example of a plot belonging to one of these datasets
+EVA_meta[grep(pattern = 'SIVIM', x = EVA_meta$Dataset)[1], ]
+
+#exclude SIVIM datasets
+SIVIM_datasets <- grep(pattern = 'SIVIM', x = EVA_meta$Dataset)
+
+EVA_meta <- EVA_meta[-SIVIM_datasets, ]
+
+#check
+#grep(pattern = 'SIVIM', x = EVA_meta$Dataset, value = T) #empty chr
+
+#I can now drop observations with missing coordinates
+#identical(which(is.na(EVA_meta$Longitude)), which(is.na(EVA_meta$Latitude))) #TRUE
+
+#number of missing coordinates
+sum(is.na(EVA_meta$Longitude)) #181037
+ 
 EVA_meta <- EVA_meta[!is.na(EVA_meta$Longitude), ]
 
 #check
@@ -162,19 +211,19 @@ colnames(EVA_meta) <- gsub(pattern = '/', replacement = '_', x = colnames(EVA_me
 #--modify habitat labels
 
 #check frequency of multiple habitat assignment
-as.data.frame(table(grep(pattern = ',', x = EVA_meta$Expert_system, value = T))) #4030 cases
+as.data.frame(table(grep(pattern = ',', x = EVA_meta$Expert_system, value = T))) #3077 cases
 
 #remove exclamation marks
 #identical(grep(pattern = '!', x = EVA_meta$Expert_system), grep(pattern = '!', x = EVA_meta$Expert_system, fixed = T)) #T
 EVA_meta$Expert_system <- gsub(pattern = '!', replacement = '', x = EVA_meta$Expert_system)
 
 #empty assignments become 'X'
-length(which(EVA_meta$Expert_system == '')) #749821
+length(which(EVA_meta$Expert_system == '')) #749608
 EVA_meta$Expert_system[which(EVA_meta$Expert_system == '')] <- 'X'
 length(which(EVA_meta$Expert_system == 'X'))
 
 #Unclassified obs become 'Y'
-length(which(EVA_meta$Expert_system == '~')) #75287
+length(which(EVA_meta$Expert_system == '~')) #71480
 unique(grep('~', EVA_meta$Expert_system, value = T))
 
 EVA_meta$Expert_system[which(EVA_meta$Expert_system == '~')] <- 'Y'
@@ -184,28 +233,28 @@ length(which(EVA_meta$Expert_system == 'Y'))
 multy_ass <- grep(pattern = ',', x = EVA_meta$Expert_system, value = T)
 
 #remove duplicated strings
-multy_ass <- unique(multy_ass)
-
-#IMPORTANT!!!! The function below does what needed, but it's odd
-#strsplit returns a list, so sapply(str_parts, substr, start = 1, stop = 1)
-#will operate on a single vector -> substr will return a vector of the same length as str_parts[[1]]
-#so sapply will return an array with dim nrow = length(str_parts[[1]]) and ncol = 1
-#importantly, the function can be vectorised by simply passing x as the whole multy_ass
-#and changing the content of the if statement, so that it returns a logical of the same length as multy_ass
-#this will make the use of sapply(multy_ass, check_multy_hab) unnecessary
+multy_ass <- unique(multy_ass) #249 cases
 
 #function to compare first letters and check if they are identical or not
 check_multy_hab <- function(x) {
   #split the string by comma
   str_parts <- strsplit(x = x, split = ',')
-  #retrieve first letter(s)
-  first_l <- sapply(str_parts, substr, start = 1, stop = 1)
-  #check if all letters are the same
-  if(length(unique(first_l)) == 1) return(TRUE) else return(FALSE)
+  #check if multy items have same first letter
+  same_first <- sapply(str_parts, function(i) {
+    
+    #get first letters of the habitat types
+    first_let <- substr(i, start = 1, stop = 1)
+    
+    #check if they are the same
+    if(length(unique(first_let)) == 1) return(TRUE) else return(FALSE)
+    
+    })
+  
+  return(same_first)
   }
 
 #match cases and corresponding logical (TRUE if the assignment is to be kept or FALSE otherwise)
-multy_ass <- setNames(object = sapply(multy_ass, check_multy_hab), nm = multy_ass)
+multy_ass <- setNames(object = check_multy_hab(x = multy_ass), nm = multy_ass)
 
 #only keep multiple habitat assignment to exclude
 multy_ass <- multy_ass[!multy_ass]
@@ -214,7 +263,7 @@ multy_ass <- multy_ass[!multy_ass]
 multy_ass <- names(multy_ass)
 
 #check how many plots would be lost due to excluding these cases
-sum(EVA_meta$Expert_system %in% multy_ass) #501 -> these can be safely removed
+sum(EVA_meta$Expert_system %in% multy_ass) #462 -> these can be safely removed
 
 #remove problematic multiple assignments
 anyNA(EVA_meta$Expert_system) #F
@@ -232,6 +281,61 @@ hab_key <- setNames(c('empty', 'surface_waters', 'unclassified', 'wetlands_mires
 #create new column
 all(unique(EVA_meta$Eunis_lev1) %in% names(hab_key)) #T
 all(names(hab_key) %in% unique(EVA_meta$Eunis_lev1)) #T
+
+##FROM HERE!!!!!!!!!!
+
+#--integrate Leblanc's classification based on the Large Language Model
+
+#import LLM-based classification
+
+#notice that this version is based on species' relative abundance
+LLM_classif <- fread(file = 'PlantBert_class/plantbert_habitat_predictions.csv', data.table = FALSE)
+
+#check NA
+anyNA(LLM_classif)
+
+#check if any duplicated plot
+sum(duplicated(LLM_classif$PlotObservationID))
+
+#modify columns - avoid white spaces and so on
+
+#replace all '-' by '_'
+colnames(LLM_classif) <- gsub(pattern = '-', replacement = '_', x = colnames(LLM_classif))
+
+#replace all white spaces by '_'
+colnames(LLM_classif) <- gsub(pattern = ' ', replacement = '_', x = colnames(LLM_classif))
+
+#remove brackets
+colnames(LLM_classif) <- gsub(pattern = '(', replacement = '_', x = colnames(LLM_classif), fixed = T)
+colnames(LLM_classif) <- gsub(pattern = ')', replacement = '_', x = colnames(LLM_classif), fixed = T)
+
+#create a copy of the last field to only include the prediction accuracy
+LLM_classif$Accuracy_for_lev2 <- LLM_classif$Most_likely_EUNIS_level_2_habitat
+
+#only keep the hab assignment in Most_likely_EUNIS_level_2_habitat
+LLM_classif$Most_likely_EUNIS_level_2_habitat <- sub(pattern = "^([^ ]+).*", replacement = "\\1", x = LLM_classif$Most_likely_EUNIS_level_2_habitat)
+
+#only keep prediction accuracy in Accuracy_for_lev2
+LLM_classif$Accuracy_for_lev2 <- as.double(sub(pattern = ".*\\(([^%]+)%\\).*", replacement = "\\1", x = LLM_classif$Accuracy_lev_2))
+
+#get some stats on the prediction accuracy
+range(LLM_classif$Accuracy_for_lev2)
+tapply(X = LLM_classif$Accuracy_for_lev2, INDEX = LLM_classif$Most_likely_EUNIS_level_2_habitat, FUN = mean)
+
+#extract first letter of lev-2 assignment
+unique(LLM_classif$Most_likely_EUNIS_level_2_habitat)
+
+#join LLM-based classification to EVA_meta. Join also classification at lev-2
+
+
+#check how many unclassified or empty assignments are gained
+anyNA(EVA_meta$Expert_system) #FALSE
+
+#ifelse(EVA_meta$Expert_system %in% c("X", "Y"), , EVA_meta$Expert_system)
+
+
+
+#--create field including verbose version of EUNIS lev-1
 
 EVA_meta$EunisVerbose_lev1 <- unname(hab_key[EVA_meta$Eunis_lev1])
 
