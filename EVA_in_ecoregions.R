@@ -1595,10 +1595,22 @@ nrow(Grass_meta) #361,367
 #check ecoregions including grasslands
 unique(Grass_meta$ECO_NAME) #64
 
-#drop obervations with Sampl_period not included between 1980 and 2022
+#drop observations with a plot size lower than 4 m^2
+sum(is.na(Grass_meta$Releve_area_m2)) #0
+class(Grass_meta$Releve_area_m2) #num
+
+#count how many plots will be dropped
+sum(Grass_meta$Releve_area_m2 < 4) #84,583
+
+Grass_meta <- Grass_meta[Grass_meta$Releve_area_m2 >= 4, ]
+
+#drop observations with Sampl_period not included between 1980 and 2022
 Grass_meta <- Grass_meta[as.integer(Grass_meta$Sampl_year) <= 2022 & as.integer(Grass_meta$Sampl_year) >= 1980, ]
 
+nrow(Grass_meta) #213,812
+
 #check
+range(as.integer(Grass_meta$Releve_area_m2))
 range(as.integer(Grass_meta$Sampl_year))
 
 #create period column
@@ -1618,13 +1630,163 @@ Grass_eco_nm <- unique(Grass_meta$ECO_NAME)
 Grass_eco_prd$ECO_NAME <- as.character(Grass_eco_prd$ECO_NAME)
 Grass_eco_prd$Period <- as.character(Grass_eco_prd$Period)
 
-#15 ecoregions
+#10 ecoregions
 Grass_eco_minN <- names(which(sapply(Grass_eco_nm, function(nm) all(Grass_eco_prd[Grass_eco_prd$ECO_NAME == nm, 'Freq'] >= 1000))))
 
 Grass_eco_prd[Grass_eco_prd$ECO_NAME %in% Grass_eco_minN, ]
 
 #check spatial distribution of ecoregions
 mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', replacement = ' ', x = Grass_eco_minN), ])
+
+#--derive ESy_plus_LLM_lev2 -> I'll use this variable in matching if needed (e.g. if prop of grass types at lev-2 changes a lot within ecoregions and betw periods)
+
+#-mismatches between ESy and LLM
+
+#notice that there are many cases where Eunis_lev1 and LLM_Eunis_lev1 deviates substantially. This seems to happen when
+#Expert_system stops at the 1st EUNIS level. Check some examples of plots that are R according to ESy, but T or Q according
+#to LLM (e.g. PlotID: 427737 - R in ESy to T, 707936 - R in Esy to Q)
+
+#check number of cases where Eunis_lev1 and LLM_Eunis_lev1 differ
+
+ESy_vs_LLM_grass <- Grass_meta[c('Expert_system', 'Eunis_lev1', 'LLM_Eunis_lev1', 'LLM_lilely_Eunis_lev2')]
+
+sapply(ESy_vs_LLM_grass, function(cl) sum(is.na(cl)))
+
+#drop NAs
+ESy_vs_LLM_grass <- ESy_vs_LLM_grass[!is.na(ESy_vs_LLM_grass$LLM_Eunis_lev1), ]
+
+#count how many times Eunis_lev1 and LLM_Eunis_lev1 differ
+sum(ESy_vs_LLM_grass$Eunis_lev1 != ESy_vs_LLM_grass$LLM_Eunis_lev1) #20,102 (out of 213,812 plots in Grass_meta)
+
+ESy_vs_LLM_ids <- which(ESy_vs_LLM_grass$Eunis_lev1 != ESy_vs_LLM_grass$LLM_Eunis_lev1)
+
+#check at which level ESy was able to classify the habitat
+
+#basically, the two classifications deviate when ESy cannot guess over the EUNIS lev-1, which makes sense
+#ESy is anyway given priority over LLM when assigning lev-1
+table(ESy_vs_LLM_grass$Expert_system[ESy_vs_LLM_ids]) #most cases are R, followed by X and Y
+
+#-
+
+#derive ESy_plus_LLM_lev2, a new field with lev-2 assignment from Expert_system (ESy) and gaps filled using LLM_lilely_Eunis_lev2 (LLM)
+
+#the procedure should follow the same criterion used to derive ESy_plus_LLM_lev1
+#first derive an Eunis_lev2 column from the Expert_system field by extracting the 1st and 2nd letter
+#then fill gaps using the LLM_lilely_Eunis_lev2 field
+
+#check how many cases of multiple assignment are left in Grass_meta
+mult_ass_grass <- unique(Grass_meta$Expert_system)
+
+#remove 'X' and 'Y'
+mult_ass_grass <- mult_ass_grass[!mult_ass_grass %in% c('X', 'Y')]
+
+mult_ass_grass <- grep(pattern = ',', x = mult_ass_grass, value = T)
+
+#check number of multiple assignments
+sum(table(Grass_meta$Expert_system[Grass_meta$Expert_system %in% mult_ass_grass])) #126 cases (out of 213,812, including uncl and empty assign)
+
+#add Eunis_lev2 columns
+#sapply(strsplit(c('R', 'R22', 'R23,R43,R60', 'Y'), split = ','), function(i) i[[1]])
+
+#naming the col as Eunis_lev_two to prevent matching Eunis_lev1
+Grass_meta$Eunis_lev_two <- vapply(strsplit(Grass_meta$Expert_system, split = ','), function(i) i[1], FUN.VALUE = character(1))
+
+#check
+#identical(Grass_meta$Expert_system[!Grass_meta$Expert_system %in% mult_ass_grass],
+#          Grass_meta$Eunis_lev_two[!Grass_meta$Expert_system %in% mult_ass_grass]) #TRUE
+
+#keep only 1st and 2nd letter of Eunis_lev_two
+#unique(substr(unique(Grass_meta$Eunis_lev_two), start = 1, stop = 2))
+
+Grass_meta$Eunis_lev_two <- substr(Grass_meta$Eunis_lev_two, start = 1, stop = 2)
+
+unique(Grass_meta$Eunis_lev_two) #"R"  "R1" "R3" "R2" "Y"  "R5" "R4" "R6" "X"
+
+#all observations in Grass_meta have 'R' in the ESy_plus_LLM_lev1 field
+#because this field was used to filter grassland data
+#fill gaps in Eunis_lev_two with corresponding entry in LLM_lilely_Eunis_lev2
+#ONLY IF (!!) the entry in LLM_lilely_Eunis_lev2 is a grassland!
+#there might be mismatch betweem ESy and LLM - there are multiple cases where ESy says 'R' at the lev-1, but LLM assigns another habitat type
+#the assignment for the ESy lev-2 is therefore missing for these cases, but it's available from LLM (although for a different habitat type) 
+
+#fill gaps in Eunis_lev_two with LLM_lilely_Eunis_lev2
+
+#check
+#unique(Grass_meta$LLM_lilely_Eunis_lev2) #there's a bit of everything here
+
+#get id position of plots with uncl or empty assignment for Eunis_lev_two, where LLM_Eunis_lev1 is 'R' and LLM_lilely_Eunis_lev2 is not NA
+LLM_lev2_id_grass <- which((Grass_meta$Eunis_lev_two %in% c('X', 'Y')) & (Grass_meta$LLM_Eunis_lev1 == 'R') & (!is.na(Grass_meta$LLM_lilely_Eunis_lev2)))
+
+length(LLM_lev2_id_grass) #10,054
+
+#the observations at these positions should be assigned lev-2 from LLM_lilely_Eunis_lev2
+#create a new column to differentiate between Eunis_lev_two (based on ESy) and ESy_plus_LLM_lev_two (based on both ESy and LLM)
+
+Grass_meta$ESy_plus_LLM_lev_two <- Grass_meta$Eunis_lev_two
+
+Grass_meta$ESy_plus_LLM_lev_two[LLM_lev2_id_grass] <- Grass_meta$LLM_lilely_Eunis_lev2[LLM_lev2_id_grass]
+
+unique(Grass_meta$ESy_plus_LLM_lev_two) #"R"  "R1" "R3" "R2" "R5" "R4" "R6"
+
+#essentially, all 'X' and 'Y entries in Eunis_lev_two were assigned
+sum(Grass_meta$Eunis_lev_two %in% c('X', 'Y')) #10,054
+
+#--quickly check if proportion of grassland types changes between periods in each ecoregion
+
+#a more definite check will be carried out once the data are ready for matching (i.e., after excluding NAs for environmental variables)
+anyNA(Grass_meta[c('ESy_plus_LLM_lev_two', 'ECO_NAME', 'Period')]) #FALSE
+
+Grass_type_prd_prop <- as.data.frame(table(Grass_meta$ESy_plus_LLM_lev_two, Grass_meta$Period, Grass_meta$ECO_NAME))
+
+#coerce fct to chr
+Grass_type_prd_prop$Var1 <- as.character(Grass_type_prd_prop$Var1)
+Grass_type_prd_prop$Var2 <- as.character(Grass_type_prd_prop$Var2)
+Grass_type_prd_prop$Var3 <- as.character(Grass_type_prd_prop$Var3)
+
+#modify colnames
+colnames(Grass_type_prd_prop)[c(1, 2, 3)] <- c('ESy_plus_LLM_lev_two', 'Period', 'ECO_NAME')
+
+#keep only ecoregions for which I have at least 1,000 obs per period
+Grass_type_prd_prop <- Grass_type_prd_prop[Grass_type_prd_prop$ECO_NAME %in% Grass_eco_minN, ]
+
+#reformat
+Grass_type_prd_prop <- do.call(rbind, lapply(Grass_eco_minN, function(eco_nm) {
+  
+  dtf <- Grass_type_prd_prop[Grass_type_prd_prop$ECO_NAME == eco_nm, ]
+  
+  dtf_prd1 <- dtf[dtf[['Period']] == 'period1', c('ESy_plus_LLM_lev_two', 'Freq')]
+  dtf_prd1$Freq <- dtf_prd1$Freq/sum(dtf_prd1$Freq)
+  
+  dtf_prd2 <- dtf[dtf[['Period']] == 'period2', c('ESy_plus_LLM_lev_two', 'Freq')]
+  dtf_prd2$Freq <- dtf_prd2$Freq/sum(dtf_prd2$Freq)
+  
+  if(identical(dtf_prd1$ESy_plus_LLM_lev_two, dtf_prd2$ESy_plus_LLM_lev_two)) {
+    
+    res <- cbind(dtf_prd1, dtf_prd2[['Freq']])
+    
+    colnames(res) <- c('ESy_plus_LLM_lev_two', 'Freq_prd1', 'Freq_prd2')
+    
+    res$ECO_NAME <- eco_nm
+    
+    return(res)
+    
+  } else {
+    
+    stop('Hab names do not match')
+    
+  }
+  
+}))
+
+ggplot(Grass_type_prd_prop, aes(x = Freq_prd1, y = Freq_prd2, col = ESy_plus_LLM_lev_two)) +
+  geom_point(size = 2) +
+  geom_abline(intercept = 0, slope = 1, col = 'black') +
+  facet_wrap(~ ECO_NAME) +
+  theme_pubr()
+
+#check correlation
+with(Grass_type_prd_prop, cor(Freq_prd1, Freq_prd2)) #0.93
+
 
 
 #---------------subset EVA_meta to keep only forests
