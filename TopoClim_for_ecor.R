@@ -1,6 +1,10 @@
 #this code provides an example on how to extract climatic and topographic data for the ecoregions
 #here, I'm using a single ecoregion to test the code
 
+##IMPORTANT!!!! Since March 3 2026, I am no longer running the code below - I am only running code of the functions
+#that I need in 'Drivers_extraction'. For this reason, numbers (e.g., #plots or #NAs) shown in this script are not updated!
+#Actually, the Cantabrian ecoregion, which is used below as a test example, is no longer included in the selection..
+
 #spatial data
 library(sf)
 library(terra)
