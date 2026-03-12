@@ -11,7 +11,25 @@ library(mapview)
 #import climatic stack already projected to epsg:3035
 clim_stack_proj <- rast('EasyClimateData/clim_stack/clim_stack_proj3035.tif')
 
-#rename layers in stack - note that clim_lyr_nm was created in the TopoClim_for_ecor script
+#extract name of climate var and year of the data from layer
+clim_lyr_nm <- names(clim_stack_proj)
+
+#extract number(s) (year in this case) from a string: https://www.r-bloggers.com/2024/06/extracting-numbers-from-strings-in-r/
+#note that this will work also when there's more than a number in the string, e.g. 1980AA2000 -> it returns 1980, 2000
+yr_from_str <- gregexpr("[0-9]+", clim_lyr_nm)
+yr_from_str <- regmatches(clim_lyr_nm, yr_from_str)
+yr_from_str <- as.integer(unlist(yr_from_str))
+
+#extract name of the variable
+#note that all climatic variables have 4-letter acronyms and the pattern used for file names is consistent
+unique(substr(clim_lyr_nm, start = 11, stop = 14)) #"Prcp" "Tavg"
+
+clim_var_nm <- substr(clim_lyr_nm, start = 11, stop = 14)
+
+#create vector of names for layers
+clim_lyr_nm <- if(isTRUE(length(yr_from_str) == length(clim_var_nm))) paste(clim_var_nm, yr_from_str, sep = "_")
+
+#rename layers in stack
 nlyr(clim_stack_proj) == length(clim_lyr_nm)
 
 names(clim_stack_proj) <- clim_lyr_nm
@@ -29,51 +47,28 @@ names(topo_stack_proj) <- c('Elevation', 'Roughness', 'Slope')
 #import hmi stack
 hmi_stack_proj <- rast('HumanModificationIndex/hmi_stack_proj3035.tif')
 
-#extract index year - strings all have the same pattern - note that hmi_nm was created in the TopoClim_for_ecor script
+#modify names of the layers
+hmi_nm <- names(hmi_stack_proj)
+
+#extract index year - strings all have the same pattern
 names(hmi_stack_proj) <- paste0('Hum_mod_ind_', substr(hmi_nm, start = 13, stop = 16))
 
 #----------------------------------extract data for Grasslands and Forests
 
-#for the moment, I'm extracting data for grasslands (EUNIS 1st lev 'R') and forests (EUNIS 1st lev 'T')
-#because I'm conducting analyses on beta diversity patterns on these two habitat types
+#extract data for grasslands (EUNIS 1st lev 'R') and forests (EUNIS 1st lev 'T')
+#analyses on beta diversity patterns will be conducted on these two habitat types
 
 #----------------------------------Grasslands
 
-#vector including names of ecoregions with minimum sample size for analyses
-length(Grass_eco_minN) #14 ecoregions
+#check Grass_meta only includes selected ecoregions
+setdiff(unique(Grass_meta$ECO_NAME), Grass_eco_minN) #empty chr
 
-Grass_sel_meta <- Grass_meta[Grass_meta$ECO_NAME %in% Grass_eco_minN, ]
-
-#check range of Sampl_year within the ecoregions
-lapply(Grass_eco_minN, function(i) range(as.integer(Grass_sel_meta[Grass_sel_meta$ECO_NAME == i, 'Sampl_year'])))
-
-
-#----------------extract ext of the different ecoregions
-
-
-#not needed if I'm not going to crop climatic stack
-Grass_ext <- lapply(Grass_eco_minN, function(i) {
-  
-  plot_id <- Grass_sel_meta$PlotID[Grass_sel_meta$ECO_NAME == i]
-  
-  res <- ext(st_bbox(EVA_meta.sp[EVA_meta.sp$PlotID %in% plot_id, ]))
-  
-  res <- res + 1000
-  
-  return(res)
-  
-  })
-
-names(Grass_ext) <- Grass_eco_minN
-
+#check range of sampling year
+range(Grass_meta$Sampl_year)
 
 #----------------extract E-OBS climatic data
 
-
-#probably faster if I directly use the Europe-wide layer instead of creating ecoregion-specific stacks
-#crop climatic stack
-#Grass_clim_stacks <- lapply(Grass_eco_minN, function(i) crop(x = clim_stack_proj, y = Grass_ext[[i]]))
-
+#directly use the Europe-wide layer instead of creating ecoregion-specific stacks
 
 #set width of temporal window for extracting climate data
 temp_width <- 5
@@ -81,66 +76,67 @@ temp_width <- 5
 #create Cl_time_start column - start of the temporal window
 #I'm doing this on the whole dataset for convenience
 
-Grass_sel_meta$Cl_time_start <- with(Grass_sel_meta, (as.integer(Sampl_year) - (temp_width - 1)))
+Grass_meta$Cl_time_start <- with(Grass_meta, (as.integer(Sampl_year) - (temp_width - 1)))
 
 #create Climate_cellID column
-Grass_cl_cellID <- terra::cellFromXY(object = clim_stack_proj[[1]], xy = as.matrix(Grass_sel_meta[c('X_laea', 'Y_laea')]))
+Grass_cl_cellID <- terra::cellFromXY(object = clim_stack_proj[[1]], xy = as.matrix(Grass_meta[c('X_laea', 'Y_laea')]))
 
 #check NA
 sum(is.na(Grass_cl_cellID)) #0
 
-Grass_sel_meta$Climate_cellID <- Grass_cl_cellID
+Grass_meta$Climate_cellID <- Grass_cl_cellID
 
 #extract climate data form cells
 test_start <- proc.time()
 
-Grass_sel_clmd <- extr_climate_eva_cells(x = Grass_sel_meta, cl_stack = clim_stack_proj,
+Grass_clmd <- extr_climate_eva_cells(x = Grass_meta, cl_stack = clim_stack_proj,
                                        cellID_col = 'Climate_cellID', from_col = 'Cl_time_start', to_col = 'Sampl_year')
 
-test_end <- proc.time() - test_start #approx 30 mins
+test_end <- proc.time() - test_start #approx 20 mins
 
 #check number and position of missing values
-sum(is.na(Grass_sel_clmd$Prcp)) #1226 (out of 72553)
-sum(is.na(Grass_sel_clmd$Tavg)) #1219
+sum(is.na(Grass_clmd$Prcp)) #737 (out of 65,861)
+sum(is.na(Grass_clmd$Tavg)) #728
 
-setdiff(which(is.na(Grass_sel_clmd$Prcp)), which(is.na(Grass_sel_clmd$Tavg))) #9 cells
-setdiff(which(is.na(Grass_sel_clmd$Tavg)), which(is.na(Grass_sel_clmd$Prcp))) #2 cells
+setdiff(which(is.na(Grass_clmd$Prcp)), which(is.na(Grass_clmd$Tavg))) #9 cells
+setdiff(which(is.na(Grass_clmd$Tavg)), which(is.na(Grass_clmd$Prcp))) #0 cells (all NA cells for Tavg are included in those for Prcp)
+all(which(is.na(Grass_clmd$Tavg)) %in% which(is.na(Grass_clmd$Prcp))) #TRUE
 
 #join climate data
-identical(class(Grass_sel_meta$Climate_cellID), class(Grass_sel_clmd$CellID)) #T
-identical(class(Grass_sel_meta$Cl_time_start), class(Grass_sel_clmd$Cl_time_start)) #T
-identical(class(Grass_sel_meta$Sampl_year), class(Grass_sel_clmd$Cl_time_end)) #T
+identical(class(Grass_meta$Climate_cellID), class(Grass_clmd$CellID)) #T
+identical(class(Grass_meta$Cl_time_start), class(Grass_clmd$Cl_time_start)) #T
+identical(class(Grass_meta$Sampl_year), class(Grass_clmd$Cl_time_end)) #T
 
-#prova <- dplyr::left_join(x = Grass_sel_meta, y = Grass_sel_clmd, by = c('Climate_cellID' = 'CellID',
+#prova <- dplyr::left_join(x = Grass_meta, y = Grass_clmd, by = c('Climate_cellID' = 'CellID',
 #                                                                         'Cl_time_start' = 'Cl_time_start',
 #                                                                         'Sampl_year' = 'Cl_time_end'))
-#all(mapply(identical, Grass_sel_meta, prova[colnames(Grass_sel_meta)])) #T
+#all(mapply(identical, Grass_meta, prova[colnames(Grass_meta)])) #T
 #rm(prova)
 
-Grass_sel_meta <- dplyr::left_join(x = Grass_sel_meta, y = Grass_sel_clmd, by = c('Climate_cellID' = 'CellID',
+Grass_meta <- dplyr::left_join(x = Grass_meta, y = Grass_clmd, by = c('Climate_cellID' = 'CellID',
                                                                          'Cl_time_start' = 'Cl_time_start',
                                                                          'Sampl_year' = 'Cl_time_end'))
 
 #check number of locations with NA for Prcp and/or Tavg
-sum(is.na(Grass_sel_meta$Prcp)) #3079
-sum(is.na(Grass_sel_meta$Tavg)) #3076
+sum(is.na(Grass_meta$Prcp)) #1,791
+sum(is.na(Grass_meta$Tavg)) #1,782
 
 #plot ids for which both Prcp and Tavg are NA
-Cl_missing_loc.gr <- intersect(Grass_sel_meta$PlotID[which(is.na(Grass_sel_meta$Prcp))], Grass_sel_meta$PlotID[which(is.na(Grass_sel_meta$Tavg))])
+Cl_missing_loc.gr <- intersect(Grass_meta$PlotID[which(is.na(Grass_meta$Prcp))], Grass_meta$PlotID[which(is.na(Grass_meta$Tavg))])
 
 #unique for Prcp
-Prcp_missing_loc.gr <- setdiff(Grass_sel_meta$PlotID[which(is.na(Grass_sel_meta$Prcp))], Grass_sel_meta$PlotID[which(is.na(Grass_sel_meta$Tavg))])
+Prcp_missing_loc.gr <- setdiff(Grass_meta$PlotID[which(is.na(Grass_meta$Prcp))], Grass_meta$PlotID[which(is.na(Grass_meta$Tavg))])
 
 #unique for Tavg
-Tavg_missing_loc.gr <- setdiff(Grass_sel_meta$PlotID[which(is.na(Grass_sel_meta$Tavg))], Grass_sel_meta$PlotID[which(is.na(Grass_sel_meta$Prcp))])
+#Tavg_missing_loc.gr <- setdiff(Grass_meta$PlotID[which(is.na(Grass_meta$Tavg))], Grass_meta$PlotID[which(is.na(Grass_meta$Prcp))])
 
 #check
 sum(duplicated(Cl_missing_loc.gr)) #0
 sum(duplicated(Prcp_missing_loc.gr)) #0
-sum(duplicated(Tavg_missing_loc.gr)) #0
+#sum(duplicated(Tavg_missing_loc.gr)) #0
 
 #get info on locations missing cl data
-Cl_missing_loc.gr <- Grass_sel_meta[Grass_sel_meta$PlotID %in% Cl_missing_loc.gr, c('PlotID', 'Prcp', 'Tavg', 'Cl_time_start', 'Sampl_year', 'X_laea', 'Y_laea')]
+Cl_missing_loc.gr <- Grass_meta[Grass_meta$PlotID %in% Cl_missing_loc.gr, c('PlotID', 'Prcp', 'Tavg', 'Cl_time_start', 'Sampl_year', 'X_laea', 'Y_laea')]
 
 #check
 #all(is.na(Cl_missing_loc.gr[[c('Prcp')]])) #T
@@ -150,33 +146,33 @@ Cl_missing_loc.gr <- fill_climate_gap(x = Cl_missing_loc.gr, cl_stack = clim_sta
                                    from_col = 'Cl_time_start', to_col = 'Sampl_year', rad_meters = ((res(clim_stack_proj)[1])+1))
 
 #check remaining NAs
-sum(is.na(Cl_missing_loc.gr$Prcp)) #1197
-sum(is.na(Cl_missing_loc.gr$Tavg)) #1197
+sum(is.na(Cl_missing_loc.gr$Prcp)) #649
+sum(is.na(Cl_missing_loc.gr$Tavg)) #649
 identical(which(is.na(Cl_missing_loc.gr$Prcp)), which(is.na(Cl_missing_loc.gr$Tavg))) #T
 
 #fill in data
-class(Grass_sel_meta$PlotID); class(Cl_missing_loc.gr$PlotID)
+class(Grass_meta$PlotID); class(Cl_missing_loc.gr$PlotID)
 
 for(i in Cl_missing_loc.gr$PlotID) {
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Prcp'] <- Cl_missing_loc.gr[Cl_missing_loc.gr$PlotID == i, 'Prcp']
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Tavg'] <- Cl_missing_loc.gr[Cl_missing_loc.gr$PlotID == i, 'Tavg']
+  Grass_meta[Grass_meta$PlotID == i, 'Prcp'] <- Cl_missing_loc.gr[Cl_missing_loc.gr$PlotID == i, 'Prcp']
+  Grass_meta[Grass_meta$PlotID == i, 'Tavg'] <- Cl_missing_loc.gr[Cl_missing_loc.gr$PlotID == i, 'Tavg']
 }
 
 rm(i)
 
 #check
-sum(is.na(Grass_sel_meta$Prcp)) #1206
-sum(is.na(Grass_sel_meta$Tavg)) #1203
+sum(is.na(Grass_meta$Prcp)) #658
+sum(is.na(Grass_meta$Tavg)) #649
 
 
-#Plots in Prcp_missing_loc.gr (9 plots) and Tavg_missing_loc.gr (6 plots) were sampled in the same Sampl_year (2020 and 2014, respectively)
-#Climatic data are missing for these specific years, although they are available for most of or all other years of the temporal window
-#Grass_sel_meta[Grass_sel_meta$PlotID %in% Prcp_missing_loc.gr, c('Sampl_year')] #all 2020
-#Grass_sel_meta[Grass_sel_meta$PlotID %in% Tavg_missing_loc.gr, c('Sampl_year')] #all 2014
+#Plots in Prcp_missing_loc.gr (9 plots) were sampled in the same Sampl_year (2020)
+#Prcp data are missing for 2020, yet they are available for all other years within the temporal window
+Grass_meta[Grass_meta$PlotID %in% Prcp_missing_loc.gr, c('Sampl_year')] # 2020
+#Grass_meta[Grass_meta$PlotID %in% Tavg_missing_loc.gr, c('Sampl_year')] #
 
-#get coordinates of locations for which either Prcp or Tavg data are missing
-Prcp_missing_loc.gr <- Grass_sel_meta[Grass_sel_meta$PlotID %in% Prcp_missing_loc.gr, c('X_laea', 'Y_laea', 'PlotID', 'Sampl_year')]
-Tavg_missing_loc.gr <- Grass_sel_meta[Grass_sel_meta$PlotID %in% Tavg_missing_loc.gr, c('X_laea', 'Y_laea', 'PlotID', 'Sampl_year')]
+#get coordinates of locations for which Prcp data are missing
+Prcp_missing_loc.gr <- Grass_meta[Grass_meta$PlotID %in% Prcp_missing_loc.gr, c('X_laea', 'Y_laea', 'PlotID', 'Sampl_year')]
+#Tavg_missing_loc.gr <- Grass_meta[Grass_meta$PlotID %in% Tavg_missing_loc.gr, c('X_laea', 'Y_laea', 'PlotID', 'Sampl_year')]
 
 prcp_tmp <- extract(clim_stack_proj[[grep(pattern = 'Prcp', x = names(clim_stack_proj))]],
                     y = Prcp_missing_loc.gr[, c('X_laea', 'Y_laea')])
@@ -191,77 +187,77 @@ prcp_tmp <- rowMeans(prcp_tmp)
 Prcp_missing_loc.gr$Prcp <- prcp_tmp
 
 #same for Tavg
-tavg_tmp <- extract(clim_stack_proj[[grep(pattern = 'Tavg', x = names(clim_stack_proj))]],
-                    y = Tavg_missing_loc.gr[, c('X_laea', 'Y_laea')])
+#tavg_tmp <- extract(clim_stack_proj[[grep(pattern = 'Tavg', x = names(clim_stack_proj))]],
+#                    y = Tavg_missing_loc.gr[, c('X_laea', 'Y_laea')])
 
-tavg_tmp <- tavg_tmp[, paste0('Tavg_', 2010:2013)]
+#tavg_tmp <- tavg_tmp[, paste0('Tavg_', 2010:2013)]
 
-tavg_tmp <- rowMeans(tavg_tmp)
+#tavg_tmp <- rowMeans(tavg_tmp)
 
-Tavg_missing_loc.gr$Tavg <- tavg_tmp
+#Tavg_missing_loc.gr$Tavg <- tavg_tmp
 
 
-#fill gaps in Grass_sel_meta
-sum(is.na(Grass_sel_meta$Prcp)) #1206
-sum(is.na(Grass_sel_meta$Tavg)) #1203
+#fill gaps in Grass_meta
+sum(is.na(Grass_meta$Prcp)) #658
+sum(is.na(Grass_meta$Tavg)) #649
 
 for(i in Prcp_missing_loc.gr$PlotID) {
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Prcp'] <- Prcp_missing_loc.gr[Prcp_missing_loc.gr$PlotID == i, 'Prcp']
+  Grass_meta[Grass_meta$PlotID == i, 'Prcp'] <- Prcp_missing_loc.gr[Prcp_missing_loc.gr$PlotID == i, 'Prcp']
   }
 
 rm(i)
 
-for(i in Tavg_missing_loc.gr$PlotID) {
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Tavg'] <- Tavg_missing_loc.gr[Tavg_missing_loc.gr$PlotID == i, 'Tavg']
-}
+#for(i in Tavg_missing_loc.gr$PlotID) {
+#  Grass_meta[Grass_meta$PlotID == i, 'Tavg'] <- Tavg_missing_loc.gr[Tavg_missing_loc.gr$PlotID == i, 'Tavg']
+#}
 
-rm(i)
+#rm(i)
 
 #remaining NAs
-sum(is.na(Grass_sel_meta$Prcp)) #1197 (out of 202595)
-sum(is.na(Grass_sel_meta$Tavg)) #1197
+sum(is.na(Grass_meta$Prcp)) #649 (out of 168,552)
+sum(is.na(Grass_meta$Tavg)) #649
 
 #remove objects created to get climate data
-rm(Grass_cl_cellID, test_start, Grass_sel_clmd, test_end, Cl_missing_loc.gr, Prcp_missing_loc.gr, Tavg_missing_loc.gr, prcp_tmp, tavg_tmp)
+rm(Grass_cl_cellID, test_start, Grass_clmd, test_end, Cl_missing_loc.gr, Prcp_missing_loc.gr, prcp_tmp)
 
 
 #----------------extract Geomorpho90m topography data
 
 #create the Topo_cellID column
-Grass_topo_cellID <- cellFromXY(object = topo_stack_proj[[1]], xy = as.matrix(Grass_sel_meta[c('X_laea', 'Y_laea')]))
+Grass_topo_cellID <- cellFromXY(object = topo_stack_proj[[1]], xy = as.matrix(Grass_meta[c('X_laea', 'Y_laea')]))
 
 #check NAs
 sum(is.na(Grass_topo_cellID)) #0
 
-#add Topo_cellID column to Grass_sel_meta
-Grass_sel_meta$Topo_cellID <- Grass_topo_cellID
+#add Topo_cellID column to Grass_meta
+Grass_meta$Topo_cellID <- Grass_topo_cellID
 
 #extract topography values from xy
-Grass_sel_topo <- extract(topo_stack_proj, y = unique(Grass_sel_meta$Topo_cellID))
+Grass_topo <- extract(topo_stack_proj, y = unique(Grass_meta$Topo_cellID))
 
 #attach cell ID column
-Grass_sel_topo$CellID <- unique(Grass_sel_meta$Topo_cellID)
+Grass_topo$CellID <- unique(Grass_meta$Topo_cellID)
 
 #check NAs
-sapply(Grass_sel_topo[c(1, 2, 3)], function(cl) sum(is.na(cl))) #Elev: 177; Rough: 202; Slope: 202
+sapply(Grass_topo[c(1, 2, 3)], function(cl) sum(is.na(cl))) #Elev: 90; Rough: 114; Slope: 114 
 
 #Roughness and slope have NAs at the same position
-identical(which(is.na(Grass_sel_topo$Roughness)), which(is.na(Grass_sel_topo$Slope))) #TRUE
+identical(which(is.na(Grass_topo$Roughness)), which(is.na(Grass_topo$Slope))) #TRUE
 
-#join topography values to Grass_sel_meta
-#prova <- dplyr::left_join(x = Grass_sel_meta, y = Grass_sel_topo, by = c('Topo_cellID' = 'CellID'))
-#identical(Grass_sel_meta, prova[colnames(Grass_sel_meta)]) #T
+#join topography values to Grass_meta
+#prova <- dplyr::left_join(x = Grass_meta, y = Grass_topo, by = c('Topo_cellID' = 'CellID'))
+#identical(Grass_meta, prova[colnames(Grass_meta)]) #T
 
-Grass_sel_meta <- dplyr::left_join(x = Grass_sel_meta, y = Grass_sel_topo, by = c('Topo_cellID' = 'CellID'))
+Grass_meta <- dplyr::left_join(x = Grass_meta, y = Grass_topo, by = c('Topo_cellID' = 'CellID'))
 
 #check number of locations with NAs
-sapply(Grass_sel_meta[c('Elevation', 'Roughness', 'Slope')], function(cl) sum(is.na(cl))) #Elev: 431; Rough: 426; Slope: 426
+sapply(Grass_meta[c('Elevation', 'Roughness', 'Slope')], function(cl) sum(is.na(cl))) #Elev: 257; Rough: 271; Slope: 271
 
 #check overlap of locations missing topo values
-length(intersect(which(is.na(Grass_sel_meta$Elevation)), which(is.na(Grass_sel_meta$Roughness)))) #246
+length(intersect(which(is.na(Grass_meta$Elevation)), which(is.na(Grass_meta$Roughness)))) #170
 
 #get coordinates of locations with NAs
-Grass_elev_missing <- Grass_sel_meta[which(is.na(Grass_sel_meta$Elevation)), c('PlotID', 'X_laea', 'Y_laea')]
+Grass_elev_missing <- Grass_meta[which(is.na(Grass_meta$Elevation)), c('PlotID', 'X_laea', 'Y_laea')]
 
 Grass_elev_missing <- data.frame(PlotID = Grass_elev_missing$PlotID,
                                  extract(x = topo_stack_proj[[c('Elevation')]], y = Grass_elev_missing[c('X_laea', 'Y_laea')],
@@ -271,10 +267,12 @@ Grass_elev_missing <- data.frame(PlotID = Grass_elev_missing$PlotID,
 Grass_elev_missing <- Grass_elev_missing[c('PlotID', 'Elevation')]
 
 #exclude NAs
-Grass_elev_missing <- Grass_elev_missing[!is.na(Grass_elev_missing$Elevation), ] #245 values
+sum(is.na(Grass_elev_missing$Elevation)) #143
+
+Grass_elev_missing <- Grass_elev_missing[!is.na(Grass_elev_missing$Elevation), ] #114 values
 
 #same for slope and roughness
-Grass_rghslo_missing <- Grass_sel_meta[which(is.na(Grass_sel_meta$Roughness)), c('PlotID', 'X_laea', 'Y_laea')]
+Grass_rghslo_missing <- Grass_meta[which(is.na(Grass_meta$Roughness)), c('PlotID', 'X_laea', 'Y_laea')]
 
 Grass_rghslo_missing <- data.frame(PlotID = Grass_rghslo_missing$PlotID,
                                    extract(x = topo_stack_proj[[c('Roughness')]], y = Grass_rghslo_missing[c('X_laea', 'Y_laea')],
@@ -286,40 +284,45 @@ Grass_rghslo_missing <- data.frame(PlotID = Grass_rghslo_missing$PlotID,
 Grass_rghslo_missing <- Grass_rghslo_missing[c('PlotID', 'Roughness', 'Slope')]
 
 #exclude NAs
-Grass_rghslo_missing <- na.omit(Grass_rghslo_missing) #248
+sum(is.na(Grass_rghslo_missing$Roughness)) #145
+sum(is.na(Grass_rghslo_missing$Slope)) #145
 
-#fill in gaps in Grass_sel_meta
+Grass_rghslo_missing <- na.omit(Grass_rghslo_missing) #126
+
+#fill in gaps in Grass_meta
 
 #Elevation
 
 for(i in Grass_elev_missing$PlotID) {
   
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Elevation'] <- Grass_elev_missing[Grass_elev_missing$PlotID == i, 'Elevation']
+  Grass_meta[Grass_meta$PlotID == i, 'Elevation'] <- Grass_elev_missing[Grass_elev_missing$PlotID == i, 'Elevation']
   
 }
 
 rm(i)
 
 #check
-sum(is.na(Grass_sel_meta$Elevation)) #186 (431 - 245)
+sum(is.na(Grass_meta$Elevation)) #143 (257 - 114)
 
 #Roughness and slope
 
 for(i in Grass_rghslo_missing$PlotID) {
   
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Roughness'] <- Grass_rghslo_missing[Grass_rghslo_missing$PlotID == i, 'Roughness']
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Slope'] <- Grass_rghslo_missing[Grass_rghslo_missing$PlotID == i, 'Slope']
+  Grass_meta[Grass_meta$PlotID == i, 'Roughness'] <- Grass_rghslo_missing[Grass_rghslo_missing$PlotID == i, 'Roughness']
+  Grass_meta[Grass_meta$PlotID == i, 'Slope'] <- Grass_rghslo_missing[Grass_rghslo_missing$PlotID == i, 'Slope']
   
 }
 
 rm(i)
 
 #check
-sum(is.na(Grass_sel_meta$Roughness)) #178 (426 - 248)
-sum(is.na(Grass_sel_meta$Slope)) #178 (426 - 248)
+sum(is.na(Grass_meta$Roughness)) #145 (271 - 126)
+sum(is.na(Grass_meta$Slope)) #145 (271 - 126)
 
-rm(Grass_topo_cellID, Grass_sel_topo, Grass_elev_missing, Grass_rghslo_missing)
+rm(Grass_topo_cellID, Grass_topo, Grass_elev_missing, Grass_rghslo_missing)
 
+
+##FROM HERE!!!!!!!!!!!
 
 #----------------extract Human Modification Index values
 
