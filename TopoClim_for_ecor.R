@@ -74,6 +74,9 @@ length(seq(1980, 2022, 1)) #43 - this means EVA data are not available for all y
 #import climatic stack already projected to epsg:3035
 clim_stack_proj <- rast('EasyClimateData/clim_stack/clim_stack_proj3035.tif')
 
+##!!The lines below to rename the layers of clim_stack_proj are also included in the 'Drivers_extraction' script
+##the idea is to make the 'Drivers_extraction' script independent from 'TopoClim_for_ecor'
+
 #extract name of climate var and year of the data from layer
 clim_lyr_nm <- names(clim_stack_proj)
 
@@ -542,6 +545,9 @@ cbind(A = get_hmi_year(x = seq.int(from = 1980, to = 2022, 1)), B = seq.int(from
 
 #import hmi stack
 hmi_stack_proj <- rast('HumanModificationIndex/hmi_stack_proj3035.tif')
+
+##!!The lines below to rename the layers of hmi_stack_proj are also included in the 'Drivers_extraction' script
+##the idea is to make the 'Drivers_extraction' script independent from 'TopoClim_for_ecor'
 
 #modify names of the layers
 hmi_nm <- names(hmi_stack_proj)
