@@ -322,70 +322,70 @@ sum(is.na(Grass_meta$Slope)) #145 (271 - 126)
 rm(Grass_topo_cellID, Grass_topo, Grass_elev_missing, Grass_rghslo_missing)
 
 
-##FROM HERE!!!!!!!!!!!
-
 #----------------extract Human Modification Index values
 
 #create the Hmi_cellID column
-Grass_hmi_cellID <- cellFromXY(object = hmi_stack_proj[[1]], xy = as.matrix(Grass_sel_meta[c('X_laea', 'Y_laea')]))
+Grass_hmi_cellID <- cellFromXY(object = hmi_stack_proj[[1]], xy = as.matrix(Grass_meta[c('X_laea', 'Y_laea')]))
 
 #check NA
 sum(is.na(Grass_hmi_cellID)) #0
 
-#add Hmi_cellID to Grass_sel_meta
-Grass_sel_meta$Hmi_cellID <- Grass_hmi_cellID
+#add Hmi_cellID to Grass_meta
+Grass_meta$Hmi_cellID <- Grass_hmi_cellID
 
 #add the Hmi_yr column, which maps Sampl_year to the closest available year of HM data
-Grass_sel_meta$Hmi_yr <- get_hmi_year(x = Grass_sel_meta$Sampl_year) 
+Grass_meta$Hmi_yr <- get_hmi_year(x = Grass_meta$Sampl_year) 
 
 #extract hmi values from cells
 test_start <- proc.time()
 
-Grass_sel_hmi <- extr_hmi_eva_cells(x = Grass_sel_meta, hmi_stack = hmi_stack_proj, cellID_col = 'Hmi_cellID', hmi_yr_col = 'Hmi_yr') 
+Grass_hmi <- extr_hmi_eva_cells(x = Grass_meta, hmi_stack = hmi_stack_proj, cellID_col = 'Hmi_cellID', hmi_yr_col = 'Hmi_yr') 
 
-test_end <- proc.time() - test_start #approx 13 mins
+test_end <- proc.time() - test_start #approx 9 mins
 
-#join hmi data to Grass_sel_meta
-#prova <- dplyr::left_join(x = Grass_sel_meta, y = Grass_sel_hmi, by = c('Hmi_cellID' = 'CellID', 'Hmi_yr' = 'Hmi_yr'))
-#identical(prova[colnames(Grass_sel_meta)], Grass_sel_meta) #T
+#join hmi data to Grass_meta
+#prova <- dplyr::left_join(x = Grass_meta, y = Grass_hmi, by = c('Hmi_cellID' = 'CellID', 'Hmi_yr' = 'Hmi_yr'))
+#identical(prova[colnames(Grass_meta)], Grass_meta) #T
 
-Grass_sel_meta <- dplyr::left_join(x = Grass_sel_meta, y = Grass_sel_hmi, by = c('Hmi_cellID' = 'CellID', 'Hmi_yr' = 'Hmi_yr'))
+Grass_meta <- dplyr::left_join(x = Grass_meta, y = Grass_hmi, by = c('Hmi_cellID' = 'CellID', 'Hmi_yr' = 'Hmi_yr'))
 
 #check number of locations with NA
-sum(is.na(Grass_sel_meta$Hmi_value)) #5326
+sum(is.na(Grass_meta$Hmi_value)) #4,462
 
 #get coordinates of locations with NA
-Grass_hmi_missing <- Grass_sel_meta[which(is.na(Grass_sel_meta$Hmi_value)), c('PlotID', 'Hmi_yr', 'X_laea', 'Y_laea')]
+Grass_hmi_missing <- Grass_meta[which(is.na(Grass_meta$Hmi_value)), c('PlotID', 'Hmi_yr', 'X_laea', 'Y_laea')]
 
 #fill gaps
 Grass_hmi_missing <- fill_hmi_gap(x = Grass_hmi_missing, hmi_stack = hmi_stack_proj, loc_id_col = 'PlotID', rad_meters = (res(hmi_stack_proj)[1] + 1))
 
 #check NA
-sum(is.na(Grass_hmi_missing$Hmi_value)) #914
+sum(is.na(Grass_hmi_missing$Hmi_value)) #834
 
 #exclude NAs
 Grass_hmi_missing <- Grass_hmi_missing[!is.na(Grass_hmi_missing$Hmi_value), ]
 
-#fill in hmi values in Grass_sel_meta
+#fill in hmi values in Grass_meta
 
 for(i in Grass_hmi_missing$PlotID) {
   
-  Grass_sel_meta[Grass_sel_meta$PlotID == i, 'Hmi_value'] <- Grass_hmi_missing[Grass_hmi_missing$PlotID == i, 'Hmi_value']
+  Grass_meta[Grass_meta$PlotID == i, 'Hmi_value'] <- Grass_hmi_missing[Grass_hmi_missing$PlotID == i, 'Hmi_value']
   
 }
 
 rm(i)
 
 #check NAs
-sum(is.na(Grass_sel_meta$Hmi_value)) #914
+sum(is.na(Grass_meta$Hmi_value)) #834
 
-rm(Grass_hmi_cellID, Grass_sel_hmi, Grass_hmi_missing)
+rm(Grass_hmi_cellID, Grass_hmi, Grass_hmi_missing)
 
-#-----save Grass_sel_meta
+#-----save Grass_meta
 
-#save Grass_sel_meta - note that this object still contains NAs for the environmental drivers
-save(Grass_sel_meta, file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Grass_selection_meta.RData')
+#save Grass_meta - note that this object still contains NAs for the environmental drivers
+save(Grass_meta, file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Grass_selection_meta.RData')
 
+
+##FROM HERE!!!!!!!!!!
 
 #----------------------------------Forests
 
