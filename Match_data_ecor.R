@@ -616,7 +616,7 @@ plot(summary(Baltic_mf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
 #same as for Alps_cmf
 Baltic_gr_perf <- check_match_performance(mobj = Baltic_mf_genetic1_ratio1_cal1_gr)
 
-# ------ 3. Carpathian_montane_forests -  ------
+# ------ 3. Carpathian_montane_forests - GENETIC ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -740,10 +740,6 @@ Carp_mf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$C
 summary(Carp_mf_genetic1_cal1_gr, un = F, interactions = T) #
 plot(summary(Carp_mf_genetic1_cal1_gr, interactions = T, un = F))
 
-##FROM HERE!!!!!!
-
-#compare performance for Carp_mf (check ESS)
-
 #--check matching performance
 
 #compare all methods (with caliper)
@@ -751,23 +747,17 @@ Carp_gr_perf <- do.call(rbind, lapply(list(PScore = Carp_mf_pscore1_ord1_cal1_gr
                            RMah = Carp_mf_rob_mahala1_ord1_cal1_gr, Genetic = Carp_mf_genetic1_cal1_gr),
                       check_match_performance))
 
-Carp_gr_perf #Pscore provides a good balance and number of matched units
+Carp_gr_perf #GENETIC provides a good balance and 'only' 390 observations less than the second 'best performing' method
 
-# ------ 4. Celtic_broadleaf_forests - Mahalanobis ------
+# ------ 4. Celtic_broadleaf_forests - GENETIC ------
 
-#balanced sample size between periods - don't test ratio = 2
-
-Celtic_bf_grass <- Grass_sel_meta[Grass_sel_meta$ECO_NAME == 'Celtic_broadleaf_forests', grass_col_to_use]
-
-names(which.min(table(Celtic_bf_grass$Period))) #period1
-
-Celtic_bf_grass$Period_bin <- ifelse(Celtic_bf_grass$Period == 'period1', 1, 0)
-
-table(Celtic_bf_grass$Period_bin)
+#check
+table(Grass_sel_ecor$Celtic_bf$Period)
+table(Grass_sel_ecor$Celtic_bf$Period_bin)
 
 #------check initial imbalance
 
-Celtic_bf_init_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = NULL, distance = 'glm')
+Celtic_bf_init_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = NULL, distance = 'glm')
 
 summary(Celtic_bf_init_gr)
 plot(summary(Celtic_bf_init_gr))
@@ -779,7 +769,7 @@ plot(Celtic_bf_init_gr, type = 'density')
 #--propensity score
 
 #logit
-Celtic_bf_pscore1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest', distance = 'glm')
+Celtic_bf_pscore1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest', distance = 'glm')
 
 summary(Celtic_bf_pscore1_gr)
 plot(Celtic_bf_pscore1_gr, type = 'jitter', interactive = F)
@@ -790,7 +780,7 @@ plot(summary(Celtic_bf_pscore1_gr, interactions = T))
 plot(summary(Celtic_bf_pscore1_gr, interactions = T, un = F))
 
 #order
-Celtic_bf_pscore1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest',
+Celtic_bf_pscore1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
                                    distance = 'glm', m.order = 'closest')
 
 summary(Celtic_bf_pscore1_ord1_gr, un = F, interactions = T)
@@ -799,18 +789,28 @@ plot(Celtic_bf_pscore1_ord1_gr, type = 'density', interactive = F)
 plot(summary(Celtic_bf_pscore1_ord1_gr, un = F))
 plot(summary(Celtic_bf_pscore1_ord1_gr, interactions = T, un = F))
 
-#using a caliper on Elevation for SMD and on Slope for var ratio
-Celtic_bf_pscore1_ord1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest',
-                                     distance = 'glm', m.order = 'closest', std.caliper = T,
-                                     caliper = c(Elevation = 1.5, Slope = 2))
+#order + ratio -> this increases precision at the expenses of balance
+Celtic_bf_pscore1_ord1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
+                                            distance = 'glm', m.order = 'closest', ratio = 2)
 
-summary(Celtic_bf_pscore1_ord1_cal1_gr, un = F, interactions = T) #157 tr obs are not matched due to the caliper (besides control obs)
-plot(summary(Celtic_bf_pscore1_ord1_cal1_gr, interactions = T, un = F))
+summary(Celtic_bf_pscore1_ord1_ratio1_gr, un = F, interactions = T)
+plot(Celtic_bf_pscore1_ord1_ratio1_gr, type = 'jitter', interactive = F)
+plot(Celtic_bf_pscore1_ord1_ratio1_gr, type = 'density', interactive = F)
+plot(summary(Celtic_bf_pscore1_ord1_ratio1_gr, un = F))
+plot(summary(Celtic_bf_pscore1_ord1_ratio1_gr, interactions = T, un = F))
+
+#using a caliper on Elevation, Roughness and Prop score (for both SMD and Var Ratio)
+Celtic_bf_pscore1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
+                                     distance = 'glm', m.order = 'closest', std.caliper = T, ratio = 2, 
+                                     caliper = c(2, Elevation = 1.9, Roughness = 2), link = 'linear.logit')
+
+summary(Celtic_bf_pscore1_ord1_ratio1_cal1_gr, un = F, interactions = T) #ESS < Matched (ESS)
+plot(summary(Celtic_bf_pscore1_ord1_ratio1_cal1_gr, interactions = T, un = F))
 
 
 #--Mahalanobis
 
-Celtic_bf_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest', distance = 'mahalanobis')
+Celtic_bf_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest', distance = 'mahalanobis')
 
 summary(Celtic_bf_mahala1_gr)
 plot(Celtic_bf_mahala1_gr, type = 'density', interactive = F)
@@ -818,7 +818,7 @@ plot(summary(Celtic_bf_mahala1_gr, un = F))
 plot(summary(Celtic_bf_mahala1_gr, interactions = T, un = F))
 
 #order
-Celtic_bf_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest',
+Celtic_bf_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
                                    distance = 'mahalanobis', m.order = 'closest')
 
 summary(Celtic_bf_mahala1_ord1_gr, un = F, interactions = T)
@@ -826,17 +826,27 @@ plot(Celtic_bf_mahala1_ord1_gr, type = 'density', interactive = F)
 plot(summary(Celtic_bf_mahala1_ord1_gr, un = F))
 plot(summary(Celtic_bf_mahala1_ord1_gr, interactions = T, un = F))
 
-#using a caliper for Elevation - same as for prop score with caliper; 1.6 is not enough to ameliorate balance for Elevation, while 1.5 does the job
-Celtic_bf_mahala1_ord1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest',
-                                     distance = 'mahalanobis', m.order = 'closest', std.caliper = TRUE, caliper = c(Elevation = 1.5))
+#order + ratio
+Celtic_bf_mahala1_ord1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
+                                            distance = 'mahalanobis', m.order = 'closest', ratio = 2) #2 control units matched to 1 tr
 
-summary(Celtic_bf_mahala1_ord1_cal1_gr, un = F, interactions = T) #84 tr observations are unmatched
-plot(summary(Celtic_bf_mahala1_ord1_cal1_gr, interactions = T, un = F))
+summary(Celtic_bf_mahala1_ord1_ratio1_gr, un = F, interactions = T)
+plot(Celtic_bf_mahala1_ord1_ratio1_gr, type = 'density', interactive = F)
+plot(summary(Celtic_bf_mahala1_ord1_ratio1_gr, un = F))
+plot(summary(Celtic_bf_mahala1_ord1_ratio1_gr, interactions = T, un = F))
+
+#using a caliper for Elevation and Roughness
+Celtic_bf_mahala1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest', ratio = 2,
+                                     distance = 'mahalanobis', m.order = 'closest', std.caliper = TRUE,
+                                     caliper = c(Elevation = 1.4, Roughness = 2))
+
+summary(Celtic_bf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #ESS < Matched (ESS)
+plot(summary(Celtic_bf_mahala1_ord1_ratio1_cal1_gr, interactions = T, un = F))
 
 
 #--robust Mahalanobis
 
-Celtic_bf_rob_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass,
+Celtic_bf_rob_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf,
                                   method = 'nearest', distance = 'robust_mahalanobis')
 
 summary(Celtic_bf_rob_mahala1_gr)
@@ -845,7 +855,7 @@ plot(summary(Celtic_bf_rob_mahala1_gr, un = F))
 plot(summary(Celtic_bf_rob_mahala1_gr, interactions = T, un = F))
 
 #order
-Celtic_bf_rob_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest',
+Celtic_bf_rob_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
                                        distance = 'robust_mahalanobis', m.order = 'closest')
 
 summary(Celtic_bf_rob_mahala1_ord1_gr, un = F, interactions = T)
@@ -853,19 +863,29 @@ plot(Celtic_bf_rob_mahala1_ord1_gr, type = 'density', interactive = F)
 plot(summary(Celtic_bf_rob_mahala1_ord1_gr, un = F))
 plot(summary(Celtic_bf_rob_mahala1_ord1_gr, interactions = T, un = F))
 
-#using a caliper for Elevation - interestingly, caliper = 1.5 (not even 1.4, actually) is not enough to ameliorate balance of Elevation^2
-Celtic_bf_rob_mahala1_ord1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'nearest',
-                                              distance = 'robust_mahalanobis', m.order = 'closest',
-                                              std.caliper = TRUE, caliper = c(Elevation = 1.3))
+#order + ratio
+Celtic_bf_rob_mahala1_ord1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
+                                            distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2) #2 control units matched to 1 tr
 
-summary(Celtic_bf_rob_mahala1_ord1_cal1_gr, un = F, interactions = T) #112 tr observations are unmatched
-plot(summary(Celtic_bf_rob_mahala1_ord1_cal1_gr, interactions = T, un = F))
+summary(Celtic_bf_rob_mahala1_ord1_ratio1_gr, un = F, interactions = T)
+plot(Celtic_bf_rob_mahala1_ord1_ratio1_gr, type = 'density', interactive = F)
+plot(summary(Celtic_bf_rob_mahala1_ord1_ratio1_gr, un = F))
+plot(summary(Celtic_bf_rob_mahala1_ord1_ratio1_gr, interactions = T, un = F))
+
+#using a caliper for Elevation and Roughness
+Celtic_bf_rob_mahala1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, method = 'nearest',
+                                              distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2,
+                                              std.caliper = TRUE, caliper = c(Elevation = 1.4, Roughness = 2))
+
+summary(Celtic_bf_rob_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #ESS < Matched (ESS)
+plot(summary(Celtic_bf_rob_mahala1_ord1_ratio1_cal1_gr, interactions = T, un = F))
 
 
 #------genetic matching
 
 #using GMD without prop.score
-Celtic_bf_genetic1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass,
+set.seed(grass_seeds[['Celtic_bf']])
+Celtic_bf_genetic1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf,
                                  method = 'genetic', pop.size = 100, distance = 'mahalanobis')
 
 summary(Celtic_bf_genetic1_gr, un = F, interactions = T)
@@ -873,49 +893,44 @@ plot(Celtic_bf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(Celtic_bf_genetic1_gr, un = F))
 plot(summary(Celtic_bf_genetic1_gr, interactions = T, un = F))
 
-#using a caliper for Elevation
-Celtic_bf_genetic1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass,
-                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                 std.caliper = TRUE, caliper = c(Elevation = 1.1))
+#ratio
+set.seed(grass_seeds[['Celtic_bf']])
+Celtic_bf_genetic1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf, ratio = 2,
+                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis')
 
-summary(Celtic_bf_genetic1_cal1_gr, un = FALSE, interactions = T) #243 unmatched tr obs
-plot(summary(Celtic_bf_genetic1_cal1_gr, interactions = T, un = F))
+summary(Celtic_bf_genetic1_ratio1_gr, un = F, interactions = T)
+plot(Celtic_bf_genetic1_ratio1_gr, type = 'density', interactive = F)
+plot(summary(Celtic_bf_genetic1_ratio1_gr, un = F))
+plot(summary(Celtic_bf_genetic1_ratio1_gr, interactions = T, un = F))
 
+#using a caliper for Elevation and Roughness
+set.seed(grass_seeds[['Celtic_bf']])
+Celtic_bf_genetic1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Celtic_bf,
+                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis', ratio = 2,
+                                 std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
 
-#using GMD with prop.score
-Celtic_bf_genetic2_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Celtic_bf_grass, method = 'genetic', distance = 'glm', pop.size = 100)
-
-summary(Celtic_bf_genetic2_gr)
-plot(Celtic_bf_genetic2_gr, type = 'density', interactive = F)
-plot(summary(Celtic_bf_genetic2_gr, un = F))
-plot(summary(Celtic_bf_genetic2_gr, interactions = T, un = F))
+summary(Celtic_bf_genetic1_ratio1_cal1_gr, un = FALSE, interactions = T) #
+plot(summary(Celtic_bf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
 
 #--check matching performance
 
-#compare all methods (with caliper)
-Celtic_gr_perf <- do.call(rbind, lapply(list(PScore = Celtic_bf_pscore1_ord1_cal1_gr,
-                                             Mah = Celtic_bf_mahala1_ord1_cal1_gr,
-                                             RMah = Celtic_bf_rob_mahala1_ord1_cal1_gr,
-                                             Genetic = Celtic_bf_genetic1_cal1_gr), check_match_performance))
+#only genetic provides good balance and ESS = Matched ESS
+Celtic_gr_perf <- check_match_performance(Celtic_bf_genetic1_ratio1_cal1_gr)
 
-Celtic_gr_perf #Mah and RMah are rather equivalent if not considering Gwd - Mah retains more observations
+Celtic_gr_perf
 
 
-# ------ 5. Central_European_mixed_forests - GENETIC ------
+# ------ 5. Central_European_mixed_forests - Mahalanobis ------
 
 #balanced sample size between periods - don't test ratio = 2
 
-CenEu_mf_grass <- Grass_sel_meta[Grass_sel_meta$ECO_NAME == 'Central_European_mixed_forests', grass_col_to_use]
-
-names(which.min(table(CenEu_mf_grass$Period))) #period2
-
-CenEu_mf_grass$Period_bin <- ifelse(CenEu_mf_grass$Period == 'period2', 1, 0)
-
-table(CenEu_mf_grass$Period_bin)
+#check
+table(Grass_sel_ecor$CenEu_mf$Period)
+table(Grass_sel_ecor$CenEu_mf$Period_bin)
 
 #------check initial imbalance
 
-CenEu_mf_init_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass, method = NULL, distance = 'glm')
+CenEu_mf_init_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf, method = NULL, distance = 'glm')
 
 summary(CenEu_mf_init_gr)
 plot(summary(CenEu_mf_init_gr))
@@ -927,7 +942,7 @@ plot(CenEu_mf_init_gr, type = 'density')
 #--propensity score
 
 #logit
-CenEu_mf_pscore1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass, method = 'nearest', distance = 'glm')
+CenEu_mf_pscore1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf, method = 'nearest', distance = 'glm')
 
 summary(CenEu_mf_pscore1_gr)
 plot(CenEu_mf_pscore1_gr, type = 'jitter', interactive = F)
@@ -938,7 +953,7 @@ plot(summary(CenEu_mf_pscore1_gr, interactions = T))
 plot(summary(CenEu_mf_pscore1_gr, interactions = T, un = F))
 
 #order
-CenEu_mf_pscore1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass, method = 'nearest',
+CenEu_mf_pscore1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf, method = 'nearest',
                                      distance = 'glm', m.order = 'closest')
 
 summary(CenEu_mf_pscore1_ord1_gr, un = F, interactions = T)
@@ -949,7 +964,7 @@ plot(summary(CenEu_mf_pscore1_ord1_gr, interactions = T, un = F))
 
 #--Mahalanobis
 
-CenEu_mf_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass, method = 'nearest', distance = 'mahalanobis')
+CenEu_mf_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf, method = 'nearest', distance = 'mahalanobis')
 
 summary(CenEu_mf_mahala1_gr, un = F, interactions = T)
 plot(CenEu_mf_mahala1_gr, type = 'density', interactive = F)
@@ -957,7 +972,7 @@ plot(summary(CenEu_mf_mahala1_gr, un = F))
 plot(summary(CenEu_mf_mahala1_gr, interactions = T, un = F))
 
 #order
-CenEu_mf_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass, method = 'nearest',
+CenEu_mf_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf, method = 'nearest',
                                      distance = 'mahalanobis', m.order = 'closest')
 
 summary(CenEu_mf_mahala1_ord1_gr, un = F, interactions = T)
@@ -967,7 +982,7 @@ plot(summary(CenEu_mf_mahala1_ord1_gr, interactions = T, un = F))
 
 #--robust Mahalanobis
 
-CenEu_mf_rob_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass,
+CenEu_mf_rob_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf,
                                     method = 'nearest', distance = 'robust_mahalanobis')
 
 summary(CenEu_mf_rob_mahala1_gr)
@@ -976,7 +991,7 @@ plot(summary(CenEu_mf_rob_mahala1_gr, un = F))
 plot(summary(CenEu_mf_rob_mahala1_gr, interactions = T, un = F))
 
 #order
-CenEu_mf_rob_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass, method = 'nearest',
+CenEu_mf_rob_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf, method = 'nearest',
                                          distance = 'robust_mahalanobis', m.order = 'closest')
 
 summary(CenEu_mf_rob_mahala1_ord1_gr, un = F, interactions = T)
@@ -987,22 +1002,14 @@ plot(summary(CenEu_mf_rob_mahala1_ord1_gr, interactions = T, un = F))
 #------genetic matching
 
 #using GMD without prop.score
-CenEu_mf_genetic1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass,
+set.seed(grass_seeds[['CenEu_mf']])
+CenEu_mf_genetic1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$CenEu_mf,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis')
 
 summary(CenEu_mf_genetic1_gr, un = F, interactions = T)
 plot(CenEu_mf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(CenEu_mf_genetic1_gr, un = F))
 plot(summary(CenEu_mf_genetic1_gr, interactions = T, un = F))
-
-#I'm not running the one below as 1) it takes quite a lot to run; 2) matching of previous methods is already very good
-#using GMD with prop.score
-#CenEu_mf_genetic2_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = CenEu_mf_grass, method = 'genetic', distance = 'glm', pop.size = 100)
-
-#summary(CenEu_mf_genetic2_gr)
-#plot(CenEu_mf_genetic2_gr, type = 'density', interactive = F)
-#plot(summary(CenEu_mf_genetic2_gr, un = F))
-#plot(summary(CenEu_mf_genetic2_gr, interactions = T, un = F))
 
 #--check matching performance
 
@@ -1012,21 +1019,17 @@ CenEu_gr_perf <- do.call(rbind, lapply(list(PScore = CenEu_mf_pscore1_ord1_gr,
                                             RMah = CenEu_mf_rob_mahala1_ord1_gr,
                                             Genetic = CenEu_mf_genetic1_gr),
                                        check_match_performance))
-CenEu_gr_perf #Genetic
+CenEu_gr_perf #Mahalanobis
 
 # ------ 6. European_Atlantic_mixed_forests - GENETIC ------
 
-EuAtl_mf_grass <- Grass_sel_meta[Grass_sel_meta$ECO_NAME == 'European_Atlantic_mixed_forests', grass_col_to_use]
-
-names(which.min(table(EuAtl_mf_grass$Period))) #period1
-
-EuAtl_mf_grass$Period_bin <- ifelse(EuAtl_mf_grass$Period == 'period1', 1, 0)
-
-table(EuAtl_mf_grass$Period_bin)
+#check
+table(Grass_sel_ecor$EuAtl_mf$Period)
+table(Grass_sel_ecor$EuAtl_mf$Period_bin)
 
 #------check initial imbalance
 
-EuAtl_mf_init_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = NULL, distance = 'glm')
+EuAtl_mf_init_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = NULL, distance = 'glm')
 
 summary(EuAtl_mf_init_gr)
 plot(summary(EuAtl_mf_init_gr))
@@ -1037,7 +1040,7 @@ plot(EuAtl_mf_init_gr, type = 'density')
 #--propensity score
 
 #logit
-EuAtl_mf_pscore1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest', distance = 'glm')
+EuAtl_mf_pscore1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest', distance = 'glm')
 
 summary(EuAtl_mf_pscore1_gr) 
 summary(EuAtl_mf_pscore1_gr, un = FALSE, interactions = T)
@@ -1049,7 +1052,7 @@ plot(summary(EuAtl_mf_pscore1_gr, interactions = T))
 plot(summary(EuAtl_mf_pscore1_gr, interactions = T, un = F))
 
 #order
-EuAtl_mf_pscore1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_pscore1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                      distance = 'glm', m.order = 'closest')
 
 summary(EuAtl_mf_pscore1_ord1_gr, un = F)
@@ -1059,7 +1062,7 @@ plot(summary(EuAtl_mf_pscore1_ord1_gr, un = F))
 plot(summary(EuAtl_mf_pscore1_ord1_gr, interactions = T, un = F))
 
 #order + ratio -> this increases precision at the expenses of balance
-EuAtl_mf_pscore1_ord1_ratio1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_pscore1_ord1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                             distance = 'glm', m.order = 'closest', ratio = 2) #2 control units matched to 1 tr
 
 
@@ -1070,17 +1073,17 @@ plot(summary(EuAtl_mf_pscore1_ord1_ratio1_gr, un = F))
 plot(summary(EuAtl_mf_pscore1_ord1_ratio1_gr, interactions = T, un = F))
 
 #using caliper on Elevation for var ratio
-EuAtl_mf_pscore1_ord1_ratio1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_pscore1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                            distance = 'glm', m.order = 'closest', ratio = 2,
                                            std.caliper = T, caliper = c(Elevation = 2))
 
-summary(EuAtl_mf_pscore1_ord1_ratio1_cal1_gr, un = F, interactions = T) #24 tr obs unmatched
+summary(EuAtl_mf_pscore1_ord1_ratio1_cal1_gr, un = F, interactions = T) #
 plot(summary(EuAtl_mf_pscore1_ord1_ratio1_cal1_gr, un = F, interactions = T))
 
 
 #--Mahalanobis
 
-EuAtl_mf_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest', distance = 'mahalanobis')
+EuAtl_mf_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest', distance = 'mahalanobis')
 
 summary(EuAtl_mf_mahala1_gr)
 plot(EuAtl_mf_mahala1_gr, type = 'density', interactive = F)
@@ -1088,7 +1091,7 @@ plot(summary(EuAtl_mf_mahala1_gr, un = F))
 plot(summary(EuAtl_mf_mahala1_gr, interactions = T, un = F))
 
 #order
-EuAtl_mf_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                      distance = 'mahalanobis', m.order = 'closest')
 
 summary(EuAtl_mf_mahala1_ord1_gr, un = F)
@@ -1097,7 +1100,7 @@ plot(summary(EuAtl_mf_mahala1_ord1_gr, un = F))
 plot(summary(EuAtl_mf_mahala1_ord1_gr, interactions = T, un = F))
 
 #order + ratio -> this increases precision at the expenses of balance
-EuAtl_mf_mahala1_ord1_ratio1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_mahala1_ord1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                             distance = 'mahalanobis', m.order = 'closest', ratio = 2) #2 control units matched to 1 tr
 
 summary(EuAtl_mf_mahala1_ord1_ratio1_gr, un = F, interactions = T)
@@ -1105,18 +1108,18 @@ plot(EuAtl_mf_mahala1_ord1_ratio1_gr, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_mahala1_ord1_ratio1_gr, un = F))
 plot(summary(EuAtl_mf_mahala1_ord1_ratio1_gr, interactions = T, un = F))
 
-#using caliper on Elevation for var ratio
-EuAtl_mf_mahala1_ord1_ratio1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+#using caliper on Elevation and Roughness for var ratio
+EuAtl_mf_mahala1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                            distance = 'mahalanobis', m.order = 'closest', ratio = 2,
-                                           std.caliper = T, caliper = c(Elevation = 2))
+                                           std.caliper = T, caliper = c(Elevation = 2, Roughness = 2))
 
-summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #24 tr obs unmatched
+summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #ESS < Matched (ESS)
 plot(summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T))
 
 
 #--robust Mahalanobis
 
-EuAtl_mf_rob_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass,
+EuAtl_mf_rob_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf,
                                     method = 'nearest', distance = 'robust_mahalanobis')
 
 summary(EuAtl_mf_rob_mahala1_gr)
@@ -1125,7 +1128,7 @@ plot(summary(EuAtl_mf_rob_mahala1_gr, un = F))
 plot(summary(EuAtl_mf_rob_mahala1_gr, interactions = T, un = F))
 
 #order
-EuAtl_mf_rob_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_rob_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                          distance = 'robust_mahalanobis', m.order = 'closest')
 
 summary(EuAtl_mf_rob_mahala1_ord1_gr, un = F)
@@ -1135,7 +1138,7 @@ plot(summary(EuAtl_mf_rob_mahala1_ord1_gr, interactions = T, un = F))
 
 
 #order + ratio -> this increases precision at the expenses of balance
-EuAtl_mf_rob_mahala1_ord1_ratio1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_rob_mahala1_ord1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                                 distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2) #2 control units matched to 1 tr
 
 summary(EuAtl_mf_rob_mahala1_ord1_ratio1_gr, un = F, interactions = T)
@@ -1144,18 +1147,19 @@ plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_gr, un = F))
 plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_gr, interactions = T, un = F))
 
 #using caliper on Elevation for var ratio
-EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'nearest',
+EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                                distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2,
                                                std.caliper = T, caliper = c(Elevation = 2))
 
-summary(EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #24 tr obs unmatched
+summary(EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #
 plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T))
 
 
 #------genetic matching
 
 #using GMD without prop.score
-EuAtl_mf_genetic1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass,
+set.seed(grass_seeds[['EuAtl_mf']])
+EuAtl_mf_genetic1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf,
                                  method = 'genetic', pop.size = 100, distance = 'mahalanobis')
 
 summary(EuAtl_mf_genetic1_gr)
@@ -1163,19 +1167,11 @@ plot(EuAtl_mf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_genetic1_gr, un = F))
 plot(summary(EuAtl_mf_genetic1_gr, interactions = T, un = F))
 
-#no need to run this below, given quality of matching achieved without prop score
-#using GMD with prop.score
-#EuAtl_mf_genetic2_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass, method = 'genetic', distance = 'glm', pop.size = 100)
-
-#summary(EuAtl_mf_genetic2_gr)
-#plot(EuAtl_mf_genetic2_gr, type = 'density', interactive = F)
-#plot(summary(EuAtl_mf_genetic2_gr, un = F))
-#plot(summary(EuAtl_mf_genetic2_gr, interactions = T, un = F))
-
 #order: it is not possible to set m.order = 'closest'
 
 #ratio
-EuAtl_mf_genetic1_ratio1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass,
+set.seed(grass_seeds[['EuAtl_mf']])
+EuAtl_mf_genetic1_ratio1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf,
                                         method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis')
 
 
@@ -1184,20 +1180,20 @@ plot(EuAtl_mf_genetic1_ratio1_gr, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_genetic1_ratio1_gr, un = F))
 plot(summary(EuAtl_mf_genetic1_ratio1_gr, interactions = T, un = F))
 
-#using caliper on Elevation for var ratio
-EuAtl_mf_genetic1_ratio1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = EuAtl_mf_grass,
+#using caliper on Elevation and Roughness for var ratio
+set.seed(grass_seeds[['EuAtl_mf']])
+EuAtl_mf_genetic1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf,
                                        method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis',
-                                       std.caliper = TRUE, caliper = c(Elevation = 2))
+                                       std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
 
 
-summary(EuAtl_mf_genetic1_ratio1_cal1_gr, un = F, interactions = T) #24 tr obs unmatched
+summary(EuAtl_mf_genetic1_ratio1_cal1_gr, un = F, interactions = T) #
 plot(summary(EuAtl_mf_genetic1_ratio1_cal1_gr, un = F, interactions = T))
 
 #--check matching performance
 
-#compare all methods
+#compare all methods, except Mahalanobis for which ESS < Matched (ESS)
 EuAtl_gr_perf <- do.call(rbind, lapply(list(PScore = EuAtl_mf_pscore1_ord1_ratio1_cal1_gr,
-                                            Mah = EuAtl_mf_mahala1_ord1_ratio1_cal1_gr,
                                             RMah = EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr,
                                             Genetic = EuAtl_mf_genetic1_ratio1_cal1_gr),
                                        check_match_performance))
@@ -1205,21 +1201,17 @@ EuAtl_gr_perf <- do.call(rbind, lapply(list(PScore = EuAtl_mf_pscore1_ord1_ratio
 EuAtl_gr_perf #Genetic
 
 
-# ------ 7. Italian_sclerophyllous_and_semi_deciduous_forests - Robust Mahalanobis ------
+# ------ 7. Italian_sclerophyllous_and_semi_deciduous_forests - Mahalanobis ------
 
 #balanced sample size between periods - don't test ratio = 2
 
-ItaScl_sdf_grass <- Grass_sel_meta[Grass_sel_meta$ECO_NAME == 'Italian_sclerophyllous_and_semi_deciduous_forests', grass_col_to_use]
-
-names(which.min(table(ItaScl_sdf_grass$Period))) #period2
-
-ItaScl_sdf_grass$Period_bin <- ifelse(ItaScl_sdf_grass$Period == 'period2', 1, 0)
-
-table(ItaScl_sdf_grass$Period_bin)
+#check
+table(Grass_sel_ecor$ItaScl_sdf$Period)
+table(Grass_sel_ecor$ItaScl_sdf$Period_bin)
 
 #------check initial imbalance
 
-ItaScl_sdf_init_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass, method = NULL, distance = 'glm')
+ItaScl_sdf_init_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf, method = NULL, distance = 'glm')
 
 summary(ItaScl_sdf_init_gr)
 plot(summary(ItaScl_sdf_init_gr))
@@ -1231,7 +1223,7 @@ plot(ItaScl_sdf_init_gr, type = 'density')
 #--propensity score
 
 #logit
-ItaScl_sdf_pscore1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass, method = 'nearest', distance = 'glm')
+ItaScl_sdf_pscore1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf, method = 'nearest', distance = 'glm')
 
 summary(ItaScl_sdf_pscore1_gr)
 plot(ItaScl_sdf_pscore1_gr, type = 'jitter', interactive = F)
@@ -1242,7 +1234,7 @@ plot(summary(ItaScl_sdf_pscore1_gr, interactions = T))
 plot(summary(ItaScl_sdf_pscore1_gr, interactions = T, un = F))
 
 #order
-ItaScl_sdf_pscore1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass, method = 'nearest',
+ItaScl_sdf_pscore1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf, method = 'nearest',
                                     distance = 'glm', m.order = 'closest')
 
 summary(ItaScl_sdf_pscore1_ord1_gr, un = F, interactions = T)
@@ -1253,7 +1245,7 @@ plot(summary(ItaScl_sdf_pscore1_ord1_gr, interactions = T, un = F))
 
 #--Mahalanobis
 
-ItaScl_sdf_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass, method = 'nearest', distance = 'mahalanobis')
+ItaScl_sdf_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf, method = 'nearest', distance = 'mahalanobis')
 
 summary(ItaScl_sdf_mahala1_gr)
 plot(ItaScl_sdf_mahala1_gr, type = 'density', interactive = F)
@@ -1261,7 +1253,7 @@ plot(summary(ItaScl_sdf_mahala1_gr, un = F))
 plot(summary(ItaScl_sdf_mahala1_gr, interactions = T, un = F))
 
 #order
-ItaScl_sdf_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass, method = 'nearest',
+ItaScl_sdf_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf, method = 'nearest',
                                     distance = 'mahalanobis', m.order = 'closest')
 
 summary(ItaScl_sdf_mahala1_ord1_gr, un = F, interactions = T)
@@ -1271,7 +1263,7 @@ plot(summary(ItaScl_sdf_mahala1_ord1_gr, interactions = T, un = F))
 
 #--robust Mahalanobis
 
-ItaScl_sdf_rob_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass,
+ItaScl_sdf_rob_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf,
                                    method = 'nearest', distance = 'robust_mahalanobis')
 
 summary(ItaScl_sdf_rob_mahala1_gr)
@@ -1280,7 +1272,7 @@ plot(summary(ItaScl_sdf_rob_mahala1_gr, un = F))
 plot(summary(ItaScl_sdf_rob_mahala1_gr, interactions = T, un = F))
 
 #order
-ItaScl_sdf_rob_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass, method = 'nearest',
+ItaScl_sdf_rob_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf, method = 'nearest',
                                         distance = 'robust_mahalanobis', m.order = 'closest')
 
 summary(ItaScl_sdf_rob_mahala1_ord1_gr, un = F, interactions = T)
@@ -1291,7 +1283,8 @@ plot(summary(ItaScl_sdf_rob_mahala1_ord1_gr, interactions = T, un = F))
 #------genetic matching
 
 #using GMD without prop.score
-ItaScl_sdf_genetic1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass,
+set.seed(grass_seeds[['ItaScl_sdf']])
+ItaScl_sdf_genetic1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$ItaScl_sdf,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis')
 
 summary(ItaScl_sdf_genetic1_gr, un = F, interactions = T)
@@ -1299,38 +1292,28 @@ plot(ItaScl_sdf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(ItaScl_sdf_genetic1_gr, un = F))
 plot(summary(ItaScl_sdf_genetic1_gr, interactions = T, un = F))
 
-#using GMD with prop.score
-ItaScl_sdf_genetic2_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = ItaScl_sdf_grass, method = 'genetic', distance = 'glm', pop.size = 100)
-
-summary(ItaScl_sdf_genetic2_gr)
-plot(ItaScl_sdf_genetic2_gr, type = 'density', interactive = F)
-plot(summary(ItaScl_sdf_genetic2_gr, un = F))
-plot(summary(ItaScl_sdf_genetic2_gr, interactions = T, un = F))
-
 #--check matching performance
 
-#comparison is between Mahalanobis and Robust Mahalanobis
-ItaScl_gr_perf <- do.call(rbind, lapply(list(Mah = ItaScl_sdf_mahala1_ord1_gr, RMah = ItaScl_sdf_rob_mahala1_ord1_gr),
+#comparison is between Prop score, Mahalanobis and Robust Mahalanobis
+ItaScl_gr_perf <- do.call(rbind, lapply(list(PScore = ItaScl_sdf_pscore1_ord1_gr,
+                                             Mah = ItaScl_sdf_mahala1_ord1_gr,
+                                             RMah = ItaScl_sdf_rob_mahala1_ord1_gr),
                                         check_match_performance))
 
-ItaScl_gr_perf #RMah
+ItaScl_gr_perf #Mah
 
 
-# ------ 8. Pannonian_mixed_forests - Robust Mahalanobis ------
+# ------ 8. Pannonian_mixed_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
-Pan_mf_grass <- Grass_sel_meta[Grass_sel_meta$ECO_NAME == 'Pannonian_mixed_forests', grass_col_to_use]
-
-names(which.min(table(Pan_mf_grass$Period))) #period1
-
-Pan_mf_grass$Period_bin <- ifelse(Pan_mf_grass$Period == 'period1', 1, 0)
-
-table(Pan_mf_grass$Period_bin)
+#check
+table(Grass_sel_ecor$Pan_mf$Period)
+table(Grass_sel_ecor$Pan_mf$Period_bin)
 
 #------check initial imbalance
 
-Pan_mf_init_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = NULL, distance = 'glm')
+Pan_mf_init_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = NULL, distance = 'glm')
 
 summary(Pan_mf_init_gr)
 plot(summary(Pan_mf_init_gr))
@@ -1342,7 +1325,7 @@ plot(Pan_mf_init_gr, type = 'density')
 #--propensity score
 
 #logit
-Pan_mf_pscore1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest', distance = 'glm')
+Pan_mf_pscore1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest', distance = 'glm')
 
 summary(Pan_mf_pscore1_gr)
 plot(Pan_mf_pscore1_gr, type = 'jitter', interactive = F)
@@ -1353,7 +1336,7 @@ plot(summary(Pan_mf_pscore1_gr, interactions = T))
 plot(summary(Pan_mf_pscore1_gr, interactions = T, un = F))
 
 #order
-Pan_mf_pscore1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest',
+Pan_mf_pscore1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest',
                                     distance = 'glm', m.order = 'closest')
 
 summary(Pan_mf_pscore1_ord1_gr, un = F, interactions = T)
@@ -1363,16 +1346,16 @@ plot(summary(Pan_mf_pscore1_ord1_gr, un = F))
 plot(summary(Pan_mf_pscore1_ord1_gr, interactions = T, un = F))
 
 #caliper on Elevation and propensity score for SMD
-Pan_mf_pscore1_ord1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest',
+Pan_mf_pscore1_ord1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest',
                                   distance = 'glm', m.order = 'closest', std.caliper = TRUE,
-                                  caliper = c(1.9, Elevation = 1.9), link = "linear.logit")
+                                  caliper = c(2, Elevation = 2), link = "linear.logit")
 
-summary(Pan_mf_pscore1_ord1_cal1_gr, un = F, interactions = T) #336 tr obs unmatched
+summary(Pan_mf_pscore1_ord1_cal1_gr, un = F, interactions = T) #
 plot(summary(Pan_mf_pscore1_ord1_cal1_gr, un = F, interactions = TRUE))
 
 #--Mahalanobis
 
-Pan_mf_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest', distance = 'mahalanobis')
+Pan_mf_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest', distance = 'mahalanobis')
 
 summary(Pan_mf_mahala1_gr)
 plot(Pan_mf_mahala1_gr, type = 'density', interactive = F)
@@ -1380,7 +1363,7 @@ plot(summary(Pan_mf_mahala1_gr, un = F))
 plot(summary(Pan_mf_mahala1_gr, interactions = T, un = F))
 
 #order
-Pan_mf_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest',
+Pan_mf_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest',
                                     distance = 'mahalanobis', m.order = 'closest')
 
 summary(Pan_mf_mahala1_ord1_gr, un = F, interactions = T)
@@ -1388,18 +1371,18 @@ plot(Pan_mf_mahala1_ord1_gr, type = 'density', interactive = F)
 plot(summary(Pan_mf_mahala1_ord1_gr, un = F))
 plot(summary(Pan_mf_mahala1_ord1_gr, interactions = T, un = F))
 
-#using a caliper for Elevation - 2 was too large to ameliorate balance for Elevation, while 1.9 was sufficient
-Pan_mf_mahala1_ord1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest',
+#using a caliper for Elevation and Roughness
+Pan_mf_mahala1_ord1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest',
                                        distance = 'mahalanobis', m.order = 'closest',
-                                       std.caliper = TRUE, caliper = c(Elevation = 1.9))
+                                       std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_mahala1_ord1_cal1_gr, un = F, interactions = T) #269 tr observations are unmatched
+summary(Pan_mf_mahala1_ord1_cal1_gr, un = F, interactions = T) #
 plot(summary(Pan_mf_mahala1_ord1_cal1_gr, interactions = T, un = F))
 
 
 #--robust Mahalanobis
 
-Pan_mf_rob_mahala1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass,
+Pan_mf_rob_mahala1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf,
                                    method = 'nearest', distance = 'robust_mahalanobis')
 
 summary(Pan_mf_rob_mahala1_gr)
@@ -1408,7 +1391,7 @@ plot(summary(Pan_mf_rob_mahala1_gr, un = F))
 plot(summary(Pan_mf_rob_mahala1_gr, interactions = T, un = F))
 
 #order
-Pan_mf_rob_mahala1_ord1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest',
+Pan_mf_rob_mahala1_ord1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest',
                                         distance = 'robust_mahalanobis', m.order = 'closest')
 
 summary(Pan_mf_rob_mahala1_ord1_gr, un = F, interactions = T)
@@ -1416,10 +1399,10 @@ plot(Pan_mf_rob_mahala1_ord1_gr, type = 'density', interactive = F)
 plot(summary(Pan_mf_rob_mahala1_ord1_gr, un = F))
 plot(summary(Pan_mf_rob_mahala1_ord1_gr, interactions = T, un = F))
 
-#using caliper on Elevation, Roughness and Slope
-Pan_mf_rob_mahala1_ord1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'nearest',
+#using caliper on Elevation and Roughness
+Pan_mf_rob_mahala1_ord1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf, method = 'nearest',
                                       distance = 'robust_mahalanobis', m.order = 'closest', std.caliper = TRUE,
-                                      caliper = c(Elevation = 1.6, Roughness = 2, Slope = 2))
+                                      caliper = c(Elevation = 1.8, Roughness = 2))
 
 summary(Pan_mf_rob_mahala1_ord1_cal1_gr, un = FALSE, interactions = T)
 plot(summary(Pan_mf_rob_mahala1_ord1_cal1_gr, un = FALSE, interactions = TRUE))
@@ -1428,7 +1411,8 @@ plot(summary(Pan_mf_rob_mahala1_ord1_cal1_gr, un = FALSE, interactions = TRUE))
 #------genetic matching
 
 #using GMD without prop.score
-Pan_mf_genetic1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass,
+set.seed(grass_seeds[['Pan_mf']])
+Pan_mf_genetic1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis')
 
 summary(Pan_mf_genetic1_gr, un = F, interactions = T)
@@ -1436,21 +1420,18 @@ plot(Pan_mf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(Pan_mf_genetic1_gr, un = F))
 plot(summary(Pan_mf_genetic1_gr, interactions = T, un = F))
 
-#using a caliper for Elevation
-Pan_mf_genetic1_cal1_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass,
+##FROM HERE!!!!!
+
+#Keep with caliper for genetic!
+
+#using a caliper for Elevation and Roughness
+set.seed(grass_seeds[['Pan_mf']])
+Pan_mf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf,
                               method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                              std.caliper = TRUE, caliper = c(Elevation = 1.1))
+                              std.caliper = TRUE, caliper = c(Elevation = 1.8, Roughness = 1.8))
 
-summary(Pan_mf_genetic1_cal1_gr, un = F, interactions = T) #376 tr observations are unmatched
+summary(Pan_mf_genetic1_cal1_gr, un = F, interactions = T) #
 plot(summary(Pan_mf_genetic1_cal1_gr, interactions = T, un = F))
-
-#using GMD with prop.score
-Pan_mf_genetic2_gr <- matchit(Period_bin ~ Elevation + Roughness + Slope, data = Pan_mf_grass, method = 'genetic', distance = 'glm', pop.size = 100)
-
-summary(Pan_mf_genetic2_gr)
-plot(Pan_mf_genetic2_gr, type = 'density', interactive = F)
-plot(summary(Pan_mf_genetic2_gr, un = F))
-plot(summary(Pan_mf_genetic2_gr, interactions = T, un = F))
 
 #--check matching performance
 
