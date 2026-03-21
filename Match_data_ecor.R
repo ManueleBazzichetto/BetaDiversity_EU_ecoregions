@@ -1737,7 +1737,7 @@ plot(summary(WesEu_bf_genetic1_gr, interactions = T, un = F))
 set.seed(grass_seeds[['WesEu_bf']])
 WesEu_bf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$WesEu_bf,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
+                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 1.4))
 
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
