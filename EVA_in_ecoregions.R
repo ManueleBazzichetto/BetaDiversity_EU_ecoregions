@@ -1983,4 +1983,16 @@ with(For_type_prd_prop, cor(Freq_prd1, Freq_prd2)) #0.96
 
 
 
+#-- save EVA_duply
+
+#save EVA_duply - these plot ids will be used to filter out dissimilarities between spatial duplicates in the GDMs
+save(EVA_duply, file = 'tmp_obj/EVA_duply_list.RData')
+
+#-- save EVA_veg
+
+#save EVA_veg data
+save(EVA_veg, file = 'tmp_obj/EVA_veg_data.RData')
+
+
+
 
