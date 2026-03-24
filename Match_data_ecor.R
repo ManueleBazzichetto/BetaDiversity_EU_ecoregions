@@ -2662,7 +2662,7 @@ ItaScl_for_perf <- do.call(rbind, lapply(list(PScore = ItaScl_sdf_pscore1_ord1_c
 
 ItaScl_for_perf #Genetic
 
-# ------ 7. Pannonian_mixed_forests -  ------
+# ------ 7. Pannonian_mixed_forests - GENETIC ------
 
 table(For_sel_ecor$Pan_mf$Period)
 table(For_sel_ecor$Pan_mf$Period_bin)
@@ -2705,7 +2705,7 @@ Pan_mf_pscore1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_s
                                                distance = 'glm', m.order = 'closest', ratio = 2, std.caliper = TRUE,
                                                link = 'linear.logit', caliper = c(2, Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T)
+summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
 plot(summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T))
 
 
@@ -2732,7 +2732,7 @@ Pan_mf_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_s
                                           distance = 'mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
                                           caliper = c(Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T)
+summary(Pan_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
 plot(summary(Pan_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
 
 #--robust Mahalanobis
@@ -2759,7 +2759,7 @@ Pan_mf_rob_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = F
                                               distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
                                               caliper = c(Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T)
+summary(Pan_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
 plot(summary(Pan_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
 
 
@@ -2785,29 +2785,26 @@ plot(Pan_mf_genetic1_ratio1_for, type = 'density', interactive = F)
 plot(summary(Pan_mf_genetic1_ratio1_for, un = F))
 plot(summary(Pan_mf_genetic1_ratio1_for, interactions = T, un = F))
 
-##FROM HERE!!!!!!!
-
-#1) Review added lines for caliper (args)
-#2) Run methods with caliper and compare
-
 #caliper on all variables
 set.seed(forest_seeds[['Pan_mf']])
 Pan_mf_genetic1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
                                       method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis',
                                       std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
 
+summary(Pan_mf_genetic1_ratio1_cal1_for, un = F, interactions = T)
+plot(summary(Pan_mf_genetic1_ratio1_cal1_for, un = F, interactions = T))
+
 
 #--check matching performance
 
-#
-Pan_for_perf <- do.call(rbind, lapply(list(PScore = ,
-                                              Mah = ,
-                                              RMah = ,
-                                              Genetic = ), check_match_performance))
+#only genetic allows 2:1 matching and good balance
+Pan_for_perf <- check_match_performance(Pan_mf_genetic1_ratio1_cal1_for)
 
 Pan_for_perf #Genetic
 
-# ------ 8. Rodope_montane_mixed_forests -  ------
+# ------ 8. Rodope_montane_mixed_forests - LESS THAN 1K OBS MATCHED ------
+
+#balanced sample size between periods - don't test ratio = 2
 
 table(For_sel_ecor$RodMon_mf$Period)
 table(For_sel_ecor$RodMon_mf$Period_bin)
@@ -2828,17 +2825,91 @@ plot(RodMon_mf_init_for, type = 'density')
 #logit
 RodMon_mf_pscore1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'glm')
 
+summary(RodMon_mf_pscore1_for, un = F, interactions = T)
+plot(summary(RodMon_mf_pscore1_for, un = F, interactions = T))
+
+#order
+RodMon_mf_pscore1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'glm',
+                                      m.order = 'closest')
+
+summary(RodMon_mf_pscore1_ord1_for, un = F, interactions = T)
+plot(summary(RodMon_mf_pscore1_ord1_for, un = F, interactions = T))
+
+#caliper on all variables and distance
+RodMon_mf_pscore1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'glm',
+                                      m.order = 'closest', std.caliper = TRUE, link = 'linear.logit',
+                                      caliper = c(1.2, Elevation = 1.1, Roughness = 1.7))
+
+summary(RodMon_mf_pscore1_ord1_cal1_for, un = F, interactions = T) #less than 1K obs matched
+plot(summary(RodMon_mf_pscore1_ord1_cal1_for, un = F, interactions = T))
+
 
 #--Mahalanobis
+
+RodMon_mf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'mahalanobis')
+
+summary(RodMon_mf_mahala1_for, un = F, interactions = T)
+plot(summary(RodMon_mf_mahala1_for, un = F, interactions = T))
+
+#order
+RodMon_mf_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'mahalanobis',
+                                      m.order = 'closest')
+
+summary(RodMon_mf_mahala1_ord1_for, un = F, interactions = T)
+plot(summary(RodMon_mf_mahala1_ord1_for, un = F, interactions = T))
+
+#caliper on all variables
+RodMon_mf_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'mahalanobis',
+                                      m.order = 'closest', std.caliper = TRUE, caliper = c(Elevation = 1, Roughness = 1.1))
+
+summary(RodMon_mf_mahala1_ord1_cal1_for, un = F, interactions = T) #less than 1K obs matched
+plot(summary(RodMon_mf_mahala1_ord1_cal1_for, un = F, interactions = T))
 
 
 #--robust Mahalanobis
 
+RodMon_mf_rob_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'robust_mahalanobis')
+
+summary(RodMon_mf_rob_mahala1_for, un = F, interactions = T)
+plot(summary(RodMon_mf_rob_mahala1_for, un = F, interactions = T))
+
+#order
+RodMon_mf_rob_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'robust_mahalanobis',
+                                          m.order = 'closest')
+
+summary(RodMon_mf_rob_mahala1_ord1_for, un = F, interactions = T)
+plot(summary(RodMon_mf_rob_mahala1_ord1_for, un = F, interactions = T))
+
+#caliper on all variables
+RodMon_mf_rob_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf, method = 'nearest', distance = 'robust_mahalanobis',
+                                          m.order = 'closest', std.caliper = TRUE, caliper = c(Elevation = 1.1, Roughness = 1.1))
+
+summary(RodMon_mf_rob_mahala1_ord1_cal1_for, un = F, interactions = T) #less than 1K obs matched
+plot(summary(RodMon_mf_rob_mahala1_ord1_cal1_for, un = F, interactions = T))
+
 #------genetic matching
+
+#using GMD without prop.score - note that distance is set to mahalanobis so that prop score is not estimated - see examples method_genetic() 
+set.seed(forest_seeds[['RodMon_mf']])
+RodMon_mf_genetic1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf,
+                                   method = 'genetic', pop.size = 100, distance = 'mahalanobis')
+
+summary(RodMon_mf_genetic1_for, un = F, interactions = T)
+plot(summary(RodMon_mf_genetic1_for, un = F, interactions = T))
+
+#caliper on Elevation
+#roughness was introduced after Elevation = 1.5 because after that it started being associated with SMD > 0.1
+set.seed(forest_seeds[['RodMon_mf']])
+RodMon_mf_genetic1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$RodMon_mf,
+                                  method = 'genetic', pop.size = 100, distance = 'mahalanobis',
+                                  std.caliper = TRUE, caliper = c(Elevation = .3, Roughness = .9))
+
+summary(RodMon_mf_genetic1_cal1_for, un = F, interactions = T) #less than 1K obs matched
+plot(summary(RodMon_mf_genetic1_cal1_for, un = F, interactions = T))
 
 #--check matching performance
 
-
+#NO METHOD ALLOWS HAVING AT LEAST 1K OBSERVATIONS PER PERIOD
 
 # ------ 9. Sarmatic_mixed_forests -  ------
 
@@ -2849,8 +2920,7 @@ table(For_sel_ecor$Sar_mf$Period_bin)
 
 Sar_mf_init_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = NULL, distance = 'glm')
 
-#No need to match data for ratio 1:1
-summary(Sar_mf_init_for)
+summary(Sar_mf_init_for, un = F, interactions = T)
 plot(summary(Sar_mf_init_for))
 plot(summary(Sar_mf_init_for, interactions = T))
 plot(Sar_mf_init_for, type = 'density')
