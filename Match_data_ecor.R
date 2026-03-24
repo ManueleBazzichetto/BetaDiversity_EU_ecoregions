@@ -4,6 +4,8 @@
 library(data.table)
 library(sf)
 #library(terra)
+library(ggplot2)
+library(ggpubr)
 
 #using statistical matching should allow obtaining samples for the two periods that
 #have comparable (balanced) distribution of (observed) covariates. In turn, this should allow making inference
@@ -2911,7 +2913,7 @@ plot(summary(RodMon_mf_genetic1_cal1_for, un = F, interactions = T))
 
 #NO METHOD ALLOWS HAVING AT LEAST 1K OBSERVATIONS PER PERIOD
 
-# ------ 9. Sarmatic_mixed_forests -  ------
+# ------ 9. Sarmatic_mixed_forests - Mahalanobis ------
 
 table(For_sel_ecor$Sar_mf$Period)
 table(For_sel_ecor$Sar_mf$Period_bin)
@@ -2925,7 +2927,110 @@ plot(summary(Sar_mf_init_for))
 plot(summary(Sar_mf_init_for, interactions = T))
 plot(Sar_mf_init_for, type = 'density')
 
-# ------ 10. Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests -  ------
+#------nearest neighbor
+
+#--propensity score
+
+#logit
+Sar_mf_pscore1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'glm')
+
+summary(Sar_mf_pscore1_for, un = F, interactions = T)
+plot(summary(Sar_mf_pscore1_for, un = F, interactions = T))
+
+#order + ratio
+Sar_mf_pscore1_ord1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'glm',
+                                          m.order = 'closest', ratio = 2)
+
+summary(Sar_mf_pscore1_ord1_ratio1_for, un = F, interactions = T)
+plot(summary(Sar_mf_pscore1_ord1_ratio1_for, un = F, interactions = T))
+
+#caliper on Roughness for Var Ratio
+Sar_mf_pscore1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'glm',
+                                          m.order = 'closest', ratio = 2, std.caliper = TRUE, caliper = c(Roughness = 2))
+
+summary(Sar_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T)
+plot(summary(Sar_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T))
+
+#--Mahalanobis
+
+Sar_mf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'mahalanobis')
+
+summary(Sar_mf_mahala1_for, un = F, interactions = T)
+plot(summary(Sar_mf_mahala1_for, un = F, interactions = T))
+
+#order + ratio
+Sar_mf_mahala1_ord1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'mahalanobis',
+                                          m.order = 'closest', ratio = 2)
+
+summary(Sar_mf_mahala1_ord1_ratio1_for, un = F, interactions = T)
+plot(summary(Sar_mf_mahala1_ord1_ratio1_for, un = F, interactions = T))
+
+#caliper on roughness for Var Ratio
+Sar_mf_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'mahalanobis',
+                                          m.order = 'closest', ratio = 2, std.caliper = TRUE, caliper = c(Roughness = 2))
+
+summary(Sar_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T)
+plot(summary(Sar_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
+
+#--robust Mahalanobis
+
+Sar_mf_rob_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'robust_mahalanobis')
+
+summary(Sar_mf_rob_mahala1_for, un = F, interactions = T)
+plot(summary(Sar_mf_rob_mahala1_for, un = F, interactions = T))
+
+#order + ratio
+Sar_mf_rob_mahala1_ord1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'robust_mahalanobis',
+                                              m.order = 'closest', ratio = 2)
+
+summary(Sar_mf_rob_mahala1_ord1_ratio1_for, un = F, interactions = T)
+plot(summary(Sar_mf_rob_mahala1_ord1_ratio1_for, un = F, interactions = T))
+
+#caliper on roughness for Var Ratio
+Sar_mf_rob_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf, method = 'nearest', distance = 'robust_mahalanobis',
+                                              m.order = 'closest', ratio = 2, std.caliper = TRUE, caliper = c(Roughness = 2))
+
+summary(Sar_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T)
+plot(summary(Sar_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
+
+#------genetic matching
+
+#using GMD without prop.score - note that distance is set to mahalanobis so that prop score is not estimated - see examples method_genetic() 
+set.seed(forest_seeds[['Sar_mf']])
+Sar_mf_genetic1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf,
+                               method = 'genetic', pop.size = 100, distance = 'mahalanobis')
+
+summary(Sar_mf_genetic1_for, un = F, interactions = T)
+plot(summary(Sar_mf_genetic1_for, un = F, interactions = T))
+
+#ratio
+set.seed(forest_seeds[['Sar_mf']])
+Sar_mf_genetic1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf,
+                               method = 'genetic', pop.size = 100, distance = 'mahalanobis', ratio = 2)
+
+summary(Sar_mf_genetic1_ratio1_for, un = F, interactions = T)
+plot(summary(Sar_mf_genetic1_ratio1_for, un = F, interactions = T))
+
+#caliper on roughness for Var Ratio
+set.seed(forest_seeds[['Sar_mf']])
+Sar_mf_genetic1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Sar_mf,
+                                      method = 'genetic', pop.size = 100, distance = 'mahalanobis', ratio = 2,
+                                      std.caliper = TRUE, caliper = c(Roughness = 2))
+
+summary(Sar_mf_genetic1_ratio1_cal1_for, un = F, interactions = T)
+plot(summary(Sar_mf_genetic1_ratio1_cal1_for, un = F, interactions = T))
+
+#--check matching performance
+
+Sar_for_perf <- do.call(rbind, lapply(list(PScore = Sar_mf_pscore1_ord1_ratio1_cal1_for,
+                                           Mah = Sar_mf_mahala1_ord1_ratio1_cal1_for,
+                                           RMah = Sar_mf_rob_mahala1_ord1_ratio1_cal1_for,
+                                           Genetic = Sar_mf_genetic1_ratio1_cal1_for), check_match_performance))
+
+Sar_for_perf #Mahalanobis (notice that all methods provide the same sample size)
+
+
+# ------ 10. Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests - PScore ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -2965,12 +3070,12 @@ plot(TyrAdr_smf_pscore1_ord1_for, type = 'density', interactive = F)
 plot(summary(TyrAdr_smf_pscore1_ord1_for, un = F))
 plot(summary(TyrAdr_smf_pscore1_ord1_for, interactions = T, un = F))
 
-#using caliper on roughness (for Var Ratio - see var ratio of roughness^2)
+#using caliper on roughness (for SMD and Var Ratio - see var ratio of roughness^2)
 TyrAdr_smf_pscore1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$TyrAdr_smf, method = 'nearest',
                                             distance = 'glm', m.order = 'closest',
                                             std.caliper = TRUE, caliper = c(Roughness = 2))
 
-summary(TyrAdr_smf_pscore1_ord1_cal1_for, un = F, interactions = T) #22 tr obs are not matched due to the caliper (besides control obs)
+summary(TyrAdr_smf_pscore1_ord1_cal1_for, un = F, interactions = T) #
 plot(summary(TyrAdr_smf_pscore1_ord1_cal1_for, interactions = T, un = F))
 
 #--Mahalanobis
@@ -2996,7 +3101,7 @@ TyrAdr_smf_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_sel_
                                             distance = 'mahalanobis', m.order = 'closest', std.caliper = TRUE,
                                             caliper = c(Roughness = 2))
 
-summary(TyrAdr_smf_mahala1_ord1_cal1_for, un = F, interactions = T) #18 tr obs are not matched due to the caliper (besides control obs)
+summary(TyrAdr_smf_mahala1_ord1_cal1_for, un = F, interactions = T) #
 plot(summary(TyrAdr_smf_mahala1_ord1_cal1_for, interactions = T, un = F))
 
 #--robust Mahalanobis
@@ -3023,7 +3128,7 @@ TyrAdr_smf_rob_mahala1_ord1_cal1_for <- matchit(formula_for_matchit, data = For_
                                                 distance = 'robust_mahalanobis', m.order = 'closest', std.caliper = TRUE,
                                                 caliper = c(Roughness = 2))
 
-summary(TyrAdr_smf_rob_mahala1_ord1_cal1_for, un = F, interactions = T) #17 tr obs are not matched due to the caliper (besides control obs)
+summary(TyrAdr_smf_rob_mahala1_ord1_cal1_for, un = F, interactions = T) #
 plot(summary(TyrAdr_smf_rob_mahala1_ord1_cal1_for, interactions = T, un = F))
 
 #------genetic matching
@@ -3044,7 +3149,7 @@ TyrAdr_smf_genetic1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor
                                         method = 'genetic', pop.size = 100, distance = 'mahalanobis', std.caliper = TRUE,
                                         caliper = c(Roughness = 2))
 
-summary(TyrAdr_smf_genetic1_cal1_for, un = F, interactions = T) #15 tr obs are not matched due to the caliper (besides control obs)
+summary(TyrAdr_smf_genetic1_cal1_for, un = F, interactions = T) #
 plot(summary(TyrAdr_smf_genetic1_cal1_for, interactions = T, un = F))
 
 #--check matching performance
@@ -3055,9 +3160,9 @@ TyrAdr_for_perf <- do.call(rbind, lapply(list(PScore = TyrAdr_smf_pscore1_ord1_c
                                               RMah = TyrAdr_smf_rob_mahala1_ord1_cal1_for,
                                               Genetic = TyrAdr_smf_genetic1_cal1_for), check_match_performance))
 
-TyrAdr_for_perf #Mahalanobis
+TyrAdr_for_perf #Propensity score
 
-# ------ 11. Western_European_broadleaf_forests -  ------
+# ------ 11. Western_European_broadleaf_forests - GENETIC ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -3148,13 +3253,13 @@ plot(summary(WesEu_bf_genetic1_for, interactions = T, un = F))
 
 #--check matching performance
 
-#all methods with caliper
+#
 WesEu_for_perf <- do.call(rbind, lapply(list(PScore = WesEu_bf_pscore1_ord1_for,
                                               Mah = WesEu_bf_mahala1_ord1_for,
                                               RMah = WesEu_bf_rob_mahala1_ord1_for,
                                               Genetic = WesEu_bf_genetic1_for), check_match_performance))
 
-WesEu_for_perf #Mahalanobis
+WesEu_for_perf #Choosing genetic, even though it has the same performance of Mahalanobis in terms of Avg_smd
 
 
 # ----
@@ -3164,31 +3269,28 @@ WesEu_for_perf #Mahalanobis
 
 #----extract matched datasets and prepare them for GDMs
 
-#Alps_conifer_and_mixed_forests: 
-#Carpathian_montane_forests: 
-#Central_European_mixed_forests: 
-#Dinaric_Mountains_mixed_forests: 
-#European_Atlantic_mixed_forests: 
-#Italian_sclerophyllous_and_semi_deciduous_forests: 
-#Pannonian_mixed_forests:
-#Rodope_montane_mixed_forests:
-#Sarmatic_mixed_forests: 
-#Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests: 
-#Western_European_broadleaf_forests: 
+#Alps_conifer_and_mixed_forests: Alps_cmf_mahala1_ord1_ratio1_for
+#Carpathian_montane_forests: Carp_mf_mahala1_ord1_for
+#Central_European_mixed_forests: CenEu_mf_pscore1_ord1_cal1_for
+#Dinaric_Mountains_mixed_forests: DinMon_mf_pscore1_ord1_for
+#European_Atlantic_mixed_forests: EuAtl_mf_genetic1_ratio1_cal1_for
+#Italian_sclerophyllous_and_semi_deciduous_forests: ItaScl_sdf_genetic1_cal1_for
+#Pannonian_mixed_forests: Pan_mf_genetic1_ratio1_cal1_for
+#Sarmatic_mixed_forests: Sar_mf_mahala1_ord1_ratio1_cal1_for
+#Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests: TyrAdr_smf_pscore1_ord1_cal1_for
+#Western_European_broadleaf_forests: WesEu_bf_genetic1_for
 
 
-Matched_datasets_forest <- list(Alps_cmf_pscore1_ord1_ratio1_for,
-                                Carp_mf_mahala1_ord1_for,
-                                CenEu_mf_pscore1_ord1_cal1_for,
-                                DinMon_mf_pscore1_ord1_for,
-                                EuAtl_mf_genetic1_ratio1_cal1_for,
-                                ItaScl_sdf_pscore1_ord1_cal1_for,
-                                Pan_mf_genetic1_for,
-                                ,
-                                TyrAdr_smf_mahala1_ord1_cal1_for,
-                                WesEu_bf_mahala1_ord1_for)
-
-names(Matched_datasets_forest) <- names(for_sel_econm[-8]) 
+Matched_datasets_forest <- list(Alps_cmf = Alps_cmf_mahala1_ord1_ratio1_for,
+                                Carp_mf = Carp_mf_mahala1_ord1_for,
+                                CenEu_mf = CenEu_mf_pscore1_ord1_cal1_for,
+                                DinMon_mf = DinMon_mf_pscore1_ord1_for,
+                                EuAtl_mf = EuAtl_mf_genetic1_ratio1_cal1_for,
+                                ItaScl_sdf = ItaScl_sdf_genetic1_cal1_for,
+                                Pan_mf = Pan_mf_genetic1_ratio1_cal1_for,
+                                Sar_mf = Sar_mf_mahala1_ord1_ratio1_cal1_for,
+                                TyrAdr_smf = TyrAdr_smf_pscore1_ord1_cal1_for,
+                                WesEu_bf = WesEu_bf_genetic1_for)
 
 
 Matched_datasets_forest <- lapply(Matched_datasets_forest, function(mobj) {
@@ -3208,35 +3310,134 @@ Matched_datasets_forest <- lapply(Matched_datasets_forest, function(mobj) {
   dtf_pr2 <- dtf[which(dtf[['Period']] == 'period2'), ]
   
   #res
-  res <- list(Period1 = dtf_pr1, Period2 =  dtf_pr2)
+  res <- list(Period1 = dtf_pr1, Period2 = dtf_pr2)
   
   return(res)
   
 })
 
-#attach dataset for Sarmatic_mixed_forests, which did not need matching
-
-identical(colnames(For_sel_ecor$Sar_mf), colnames(Matched_datasets_forest$Alps_cmf$Period1)) #TRUE
-'Sar_mf' %in% names(Matched_datasets_forest)
-
-Matched_datasets_forest[['Sar_mf']] <- list(Period1 = For_sel_ecor$Sar_mf[which(For_sel_ecor$Sar_mf$Period == 'period1'), ],
-                                                            Period2 = For_sel_ecor$Sar_mf[which(For_sel_ecor$Sar_mf$Period == 'period2'), ])
-
-#re-order alphabetically
-Matched_datasets_forest <- Matched_datasets_forest[sort(names(Matched_datasets_forest))]
 
 #check all datasets have min sample size (1k observations per period)
-all(sapply(Matched_datasets_forest, function(eco) all(sapply(eco, function(prd) nrow(prd) >= 1000L))))
+all(sapply(Matched_datasets_forest, function(eco) all(sapply(eco, function(prd) nrow(prd) >= 1000L)))) #TRUE
 
 
-#save data to run GDM in another R project
-save(Matched_datasets_forest, file = '/Temporary_proj_run_GDM/Tmp_data_for_GDM_forest.RData')
+#save Matched_datasets_forest to run GDM in another R project
+save(Matched_datasets_forest, file = 'tmp_obj/Matched_dt_forest.RData')
 
-#save EVA_veg to run GDM in another R project.
-#Notice that EVA_veg was already saved above. However, reloading the obj saved above in the Rprj where I am currently running the GDMs
-#will overwrite the list of matched datasets for grasslands. !!!!Next time, save EVA_veg separately, so that I don't have to export it twice
-save(EVA_veg, file = '/Temporary_proj_run_GDM/EVA_veg_data.RData')
+#save elements in Matched_datasets_forest separately
 
+#names(Matched_datasets_forest)
+
+for(nm in names(Matched_datasets_forest)) {
+  
+  tmp_to_save <- Matched_datasets_forest[[nm]]
+  
+  save(tmp_to_save, file = paste0("tmp_obj/Separate_matched_dt_forest/", nm, "_for.RData"))
+  
+}
+
+rm(tmp_to_save, nm)
+
+#-------------------------------------------------check again proportion of lev-2 EUNIS habitat types between prd1 and prd2
+
+#the idea is to check if the proportion of lev-2 EUNIS habitat types within each ecoregion and between periods is still highly correlated
+#this was already tested before matching period-specific samples in the EVA_in_ecoregions script
+
+#--grasslands
+
+anyNA(Grass_meta$ESy_plus_LLM_lev_two) #FALSE
+
+freq_lev2_hab_grass <- do.call(rbind, lapply(names(Matched_datasets_grass), function(eco_nm) {
+  
+  #get list for eco_nm
+  eco_list <- Matched_datasets_grass[[eco_nm]]
+  
+  #loop over periods
+  res_prd <- do.call(rbind, lapply(names(eco_list), function(prd_nm) {
+    
+    #get period-specific dataset
+    prd <- eco_list[[prd_nm]]
+    
+    #select only some of the cols
+    prd <- prd[c('PlotID')]
+    
+    #add ESy_plus_LLM_lev_two columns to prd
+    prd <- dplyr::left_join(prd, Grass_meta[c('PlotID', 'ESy_plus_LLM_lev_two')], by = 'PlotID')
+    
+    #count lev-2 hab types
+    prd_tb <- as.data.frame(table(prd[['ESy_plus_LLM_lev_two']]))
+    
+    #coerce Var1 to chr
+    prd_tb$Var1 <- as.character(prd_tb$Var1)
+    
+    #compute proportions
+    prd_tb$Freq <- prd_tb$Freq/sum(prd_tb$Freq)
+    
+    #add prd column
+    prd_tb$Period <- prd_nm
+    
+    return(prd_tb)
+    
+    }))
+  
+  #add eco_nm
+  res_prd$ECO_NAME <- eco_nm
+  
+  #return res
+  return(res_prd)
+  
+  }))
+
+ggplot(freq_lev2_hab_grass, aes(x = Var1, y = Freq, fill = Period)) +
+  geom_col(position = position_dodge(width = .5)) +
+  facet_wrap(~ ECO_NAME) +
+  theme_pubr()
+
+
+cor_lev2_hab_grass <- do.call(rbind, lapply(unique(freq_lev2_hab_grass$ECO_NAME), function(eco_nm) {
+  
+  #eco dt
+  eco_dtf <- freq_lev2_hab_grass[freq_lev2_hab_grass$ECO_NAME == eco_nm, ]
+  #hab in prd1
+  hab_prd1 <- eco_dtf[eco_dtf$Period == 'Period1', 'Var1']
+  #hab in prd2
+  hab_prd2 <- eco_dtf[eco_dtf$Period == 'Period2', 'Var1']
+  
+  #check who's missing and where
+  prd1_not_in_prd2 <- setdiff(hab_prd1, hab_prd2)
+  prd2_not_in_prd1 <- setdiff(hab_prd2, hab_prd1)
+  
+  #get freqs
+  freq_prd1 <- eco_dtf[eco_dtf$Period == 'Period1', 'Freq']
+  #add 0 to missing
+  freq_prd1 <- c(setNames(freq_prd1, nm = hab_prd1), setNames(rep(0, length(prd2_not_in_prd1)), nm = prd2_not_in_prd1))
+  #same for prd2
+  freq_prd2 <- eco_dtf[eco_dtf$Period == 'Period2', 'Freq']
+  #add 0 to missing
+  freq_prd2 <- c(setNames(freq_prd2, nm = hab_prd2), setNames(rep(0, length(prd1_not_in_prd2)), nm = prd1_not_in_prd2))
+  #check if vectors have same names
+  if(!(all(names(freq_prd1) %in% names(freq_prd2)) && all(names(freq_prd2) %in% names(freq_prd1)))) stop('Names do not match')
+  #order freq_prd2 so that it matches names in freq_prd1
+  freq_prd2 <- freq_prd2[names(freq_prd1)]
+  #result
+  res <- data.frame(Frq_prd1 = unname(freq_prd1), Frq_prd2 = unname(freq_prd2), Hab_type = names(freq_prd1), ECO_NAME = eco_nm)
+  
+  return(res)
+  
+  }))
+
+round(with(cor_lev2_hab_grass, cor(Frq_prd1, Frq_prd2)), digits = 2) #0.93
+
+ggplot(cor_lev2_hab_grass, aes(x = Frq_prd1, y = Frq_prd2, col = Hab_type)) +
+  geom_point(size = 2) +
+  geom_abline(intercept = 0, slope = 1, col = 'black') +
+  facet_wrap(~ ECO_NAME) +
+  xlab('Period1') + ylab('Period2') +
+  theme_pubr()
+
+##FROM HERE!!!!!!
+
+#Check code above and run the same for forests!
 
 #-------------------------------------------------create maps showing ecoregions selected for analyses
 
