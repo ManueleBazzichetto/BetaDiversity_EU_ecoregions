@@ -3533,6 +3533,19 @@ cor_prd1_2_for <- ggplot(cor_lev2_hab_for, aes(x = Frq_prd1, y = Frq_prd2, col =
   xlab('Period1') + ylab('Period2') +
   theme_pubr()
 
+
+#--save ecoregions long and short names
+
+shared_ecor_names <- intersect(grass_sel_econm, for_sel_econm)
+
+sel_ecor_names <- c(grass_sel_econm[!grass_sel_econm %in% shared_ecor_names], for_sel_econm[!for_sel_econm %in% 'Rodope_montane_mixed_forests'])
+
+sum(duplicated(sel_ecor_names)) #0
+
+sel_ecor_names <- sort(sel_ecor_names)
+
+save(sel_ecor_names, file = 'tmp_obj/Selected_ecor_names.RData')
+
 #-------------------------------------------------create maps showing ecoregions selected for analyses
 
 library(paletteer)
