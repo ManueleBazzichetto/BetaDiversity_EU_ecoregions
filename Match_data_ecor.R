@@ -3340,7 +3340,7 @@ rm(tmp_to_save, nm)
 
 #-------------------------------------------------check again proportion of lev-2 EUNIS habitat types between prd1 and prd2
 
-#the idea is to check if the proportion of lev-2 EUNIS habitat types within each ecoregion and between periods is still highly correlated
+#the idea is to check if the proportion of lev-2 EUNIS habitat types within each ecoregion is still highly correlated between periods
 #this was already tested before matching period-specific samples in the EVA_in_ecoregions script
 
 #--grasslands
@@ -3361,7 +3361,7 @@ freq_lev2_hab_grass <- do.call(rbind, lapply(names(Matched_datasets_grass), func
     #select only some of the cols
     prd <- prd[c('PlotID')]
     
-    #add ESy_plus_LLM_lev_two columns to prd
+    #add ESy_plus_LLM_lev_two column to prd
     prd <- dplyr::left_join(prd, Grass_meta[c('PlotID', 'ESy_plus_LLM_lev_two')], by = 'PlotID')
     
     #count lev-2 hab types
@@ -3388,7 +3388,8 @@ freq_lev2_hab_grass <- do.call(rbind, lapply(names(Matched_datasets_grass), func
   
   }))
 
-ggplot(freq_lev2_hab_grass, aes(x = Var1, y = Freq, fill = Period)) +
+#updated comparison of proportions between periods
+upd_prop_prd1_2_grass <- ggplot(freq_lev2_hab_grass, aes(x = Var1, y = Freq, fill = Period)) +
   geom_col(position = position_dodge(width = .5)) +
   facet_wrap(~ ECO_NAME) +
   theme_pubr()
@@ -3403,7 +3404,7 @@ cor_lev2_hab_grass <- do.call(rbind, lapply(unique(freq_lev2_hab_grass$ECO_NAME)
   #hab in prd2
   hab_prd2 <- eco_dtf[eco_dtf$Period == 'Period2', 'Var1']
   
-  #check who's missing and where
+  #check which hab type is missing and where
   prd1_not_in_prd2 <- setdiff(hab_prd1, hab_prd2)
   prd2_not_in_prd1 <- setdiff(hab_prd2, hab_prd1)
   
@@ -3416,46 +3417,138 @@ cor_lev2_hab_grass <- do.call(rbind, lapply(unique(freq_lev2_hab_grass$ECO_NAME)
   #add 0 to missing
   freq_prd2 <- c(setNames(freq_prd2, nm = hab_prd2), setNames(rep(0, length(prd1_not_in_prd2)), nm = prd1_not_in_prd2))
   #check if vectors have same names
-  if(!(all(names(freq_prd1) %in% names(freq_prd2)) && all(names(freq_prd2) %in% names(freq_prd1)))) stop('Names do not match')
+  if(!(all(names(freq_prd1) %in% names(freq_prd2)) && all(names(freq_prd2) %in% names(freq_prd1)))) stop('Hab names do not match')
   #order freq_prd2 so that it matches names in freq_prd1
   freq_prd2 <- freq_prd2[names(freq_prd1)]
+  if(!identical(names(freq_prd1), names(freq_prd2))) stop('Hab names are not identical')
   #result
   res <- data.frame(Frq_prd1 = unname(freq_prd1), Frq_prd2 = unname(freq_prd2), Hab_type = names(freq_prd1), ECO_NAME = eco_nm)
-  
+  #return result
   return(res)
   
   }))
 
 round(with(cor_lev2_hab_grass, cor(Frq_prd1, Frq_prd2)), digits = 2) #0.93
 
-ggplot(cor_lev2_hab_grass, aes(x = Frq_prd1, y = Frq_prd2, col = Hab_type)) +
+#correlation among hab proportions between periods
+cor_prd1_2_grass <- ggplot(cor_lev2_hab_grass, aes(x = Frq_prd1, y = Frq_prd2, col = Hab_type)) +
   geom_point(size = 2) +
   geom_abline(intercept = 0, slope = 1, col = 'black') +
   facet_wrap(~ ECO_NAME) +
   xlab('Period1') + ylab('Period2') +
   theme_pubr()
 
-##FROM HERE!!!!!!
 
-#Check code above and run the same for forests!
+#--forests
+
+anyNA(Forest_meta$ESy_plus_LLM_lev_two) #FALSE
+
+freq_lev2_hab_for <- do.call(rbind, lapply(names(Matched_datasets_forest), function(eco_nm) {
+  
+  #get list for eco_nm
+  eco_list <- Matched_datasets_forest[[eco_nm]]
+  
+  #loop over periods
+  res_prd <- do.call(rbind, lapply(names(eco_list), function(prd_nm) {
+    
+    #get period-specific dataset
+    prd <- eco_list[[prd_nm]]
+    
+    #select only some of the cols
+    prd <- prd[c('PlotID')]
+    
+    #add ESy_plus_LLM_lev_two column to prd
+    prd <- dplyr::left_join(prd, Forest_meta[c('PlotID', 'ESy_plus_LLM_lev_two')], by = 'PlotID')
+    
+    #count lev-2 hab types
+    prd_tb <- as.data.frame(table(prd[['ESy_plus_LLM_lev_two']]))
+    
+    #coerce Var1 to chr
+    prd_tb$Var1 <- as.character(prd_tb$Var1)
+    
+    #compute proportions
+    prd_tb$Freq <- prd_tb$Freq/sum(prd_tb$Freq)
+    
+    #add prd column
+    prd_tb$Period <- prd_nm
+    
+    return(prd_tb)
+    
+  }))
+  
+  #add eco_nm
+  res_prd$ECO_NAME <- eco_nm
+  
+  #return res
+  return(res_prd)
+  
+}))
+
+#updated comparison of proportions between periods
+upd_prop_prd1_2_for <- ggplot(freq_lev2_hab_for, aes(x = Var1, y = Freq, fill = Period)) +
+  geom_col(position = position_dodge(width = .5)) +
+  facet_wrap(~ ECO_NAME) +
+  theme_pubr()
+
+cor_lev2_hab_for <- do.call(rbind, lapply(unique(freq_lev2_hab_for$ECO_NAME), function(eco_nm) {
+  
+  #eco dt
+  eco_dtf <- freq_lev2_hab_for[freq_lev2_hab_for$ECO_NAME == eco_nm, ]
+  #hab in prd1
+  hab_prd1 <- eco_dtf[eco_dtf$Period == 'Period1', 'Var1']
+  #hab in prd2
+  hab_prd2 <- eco_dtf[eco_dtf$Period == 'Period2', 'Var1']
+  
+  #check which hab type is missing and where
+  prd1_not_in_prd2 <- setdiff(hab_prd1, hab_prd2)
+  prd2_not_in_prd1 <- setdiff(hab_prd2, hab_prd1)
+  
+  #get freqs
+  freq_prd1 <- eco_dtf[eco_dtf$Period == 'Period1', 'Freq']
+  #add 0 to missing
+  freq_prd1 <- c(setNames(freq_prd1, nm = hab_prd1), setNames(rep(0, length(prd2_not_in_prd1)), nm = prd2_not_in_prd1))
+  #same for prd2
+  freq_prd2 <- eco_dtf[eco_dtf$Period == 'Period2', 'Freq']
+  #add 0 to missing
+  freq_prd2 <- c(setNames(freq_prd2, nm = hab_prd2), setNames(rep(0, length(prd1_not_in_prd2)), nm = prd1_not_in_prd2))
+  #check if vectors have same names
+  if(!(all(names(freq_prd1) %in% names(freq_prd2)) && all(names(freq_prd2) %in% names(freq_prd1)))) stop('Hab names do not match')
+  #order freq_prd2 so that it matches names in freq_prd1
+  freq_prd2 <- freq_prd2[names(freq_prd1)]
+  if(!identical(names(freq_prd1), names(freq_prd2))) stop('Hab names are not identical')
+  #result
+  res <- data.frame(Frq_prd1 = unname(freq_prd1), Frq_prd2 = unname(freq_prd2), Hab_type = names(freq_prd1), ECO_NAME = eco_nm)
+  #return result
+  return(res)
+  
+}))
+
+round(with(cor_lev2_hab_for, cor(Frq_prd1, Frq_prd2)), digits = 2) #0.97
+
+#correlation among hab proportions between periods
+cor_prd1_2_for <- ggplot(cor_lev2_hab_for, aes(x = Frq_prd1, y = Frq_prd2, col = Hab_type)) +
+  geom_point(size = 2) +
+  geom_abline(intercept = 0, slope = 1, col = 'black') +
+  facet_wrap(~ ECO_NAME) +
+  xlab('Period1') + ylab('Period2') +
+  theme_pubr()
 
 #-------------------------------------------------create maps showing ecoregions selected for analyses
 
 library(paletteer)
 
-sel_ecor_analysis <- list(Grass = unique(Grass_sel_meta$ECO_NAME),
-                          Forest = unique(Forest_sel_meta$ECO_NAME))
+all(names(grass_sel_econm) %in% names(Matched_datasets_grass)) #TRUE
+all(names(for_sel_econm[!for_sel_econm %in% "Rodope_montane_mixed_forests"]) %in% names(Matched_datasets_forest)) #TRUE
 
-length(sel_ecor_analysis$Grass) #14 - drop Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests that did not meet min smp size requirement (for grass)
-
-sel_ecor_analysis$Grass <- sel_ecor_analysis$Grass[!sel_ecor_analysis$Grass %in% 'Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests'] 
+sel_ecor_analysis <- list(Grass = unname(grass_sel_econm),
+                          Forest = unname(for_sel_econm[!for_sel_econm %in% "Rodope_montane_mixed_forests"]))
 
 #drop "_" and add '-' in ecor names to match ECO_NAME in eu_ecoregions.proj
 sel_ecor_analysis$Grass <- gsub(pattern = '_', replacement = ' ', x = sel_ecor_analysis$Grass)
 sel_ecor_analysis$Forest <- gsub(pattern = '_', replacement = ' ', x = sel_ecor_analysis$Forest)
 
-sel_ecor_analysis$Grass[9] <- "Italian sclerophyllous and semi-deciduous forests"
-sel_ecor_analysis$Forest[c(8, 10)] <- c("Italian sclerophyllous and semi-deciduous forests", "Tyrrhenian-Adriatic sclerophyllous and mixed forests")
+sel_ecor_analysis$Grass[7] <- "Italian sclerophyllous and semi-deciduous forests"
+sel_ecor_analysis$Forest[c(6, 9)] <- c("Italian sclerophyllous and semi-deciduous forests", "Tyrrhenian-Adriatic sclerophyllous and mixed forests")
 
 #create palette for ecoregions
 sel_ecor_palette <- unique(unlist(sel_ecor_analysis)) 
@@ -3470,6 +3563,8 @@ sel_ecor_bbox <- st_bbox(obj = eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %i
 
 #not using the palette - I am simply coloring grass in lightgreen and forests in dark green
 
+par(mfrow = c(1, 2))
+
 #grass
 plot(st_geometry(st_crop(x = eu_ecoregions.proj, y = sel_ecor_bbox)))
 plot(st_geometry(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% sel_ecor_analysis$Grass, ]),
@@ -3480,6 +3575,9 @@ plot(st_geometry(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% sel_ecor_an
 plot(st_geometry(st_crop(x = eu_ecoregions.proj, y = sel_ecor_bbox)))
 plot(st_geometry(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% sel_ecor_analysis$Forest, ]),
      col = 'darkgreen', add = T)
+
+
+
 
 
 
