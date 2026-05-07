@@ -3590,7 +3590,72 @@ plot(st_geometry(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% sel_ecor_an
      col = 'darkgreen', add = T)
 
 
+#-------------------------------------------------rank ecoregions by altitude, longitude and latitude
 
+#the ranking is based on longitude, latitude and altitude of the vegetation plots
+#using data for the whole ecoregion would be misleading because the vegetation plots
+#occupy only a portion of the entire ecoregion
+
+lon_lat_alt_grass <- do.call(rbind, lapply(Matched_datasets_grass, function(eco) {
+  
+  dtf <- do.call(rbind, lapply(eco, function(prd) prd[c('X_laea', 'Y_laea', 'Elevation')]))
+  
+  res <- apply(dtf, 2, median)
+  
+  }))
+
+#add ranking
+
+ord_lon_grass <- sort(lon_lat_alt_grass[, 'X_laea'], decreasing = F)
+ord_lon_grass <- setNames(seq_along(ord_lon_grass), nm = names(ord_lon_grass))
+
+ord_lat_grass <- sort(lon_lat_alt_grass[, 'Y_laea'], decreasing = F)
+ord_lat_grass <- setNames(seq_along(ord_lat_grass), nm = names(ord_lat_grass))
+
+ord_alt_grass <- sort(lon_lat_alt_grass[, 'Elevation'], decreasing = F)
+ord_alt_grass <- setNames(seq_along(ord_alt_grass), nm = names(ord_alt_grass))
+
+
+lon_lat_alt_grass <- data.frame(lon_lat_alt_grass,
+                                X_ord = ord_lon_grass[rownames(lon_lat_alt_grass)],
+                                Y_ord = ord_lat_grass[rownames(lon_lat_alt_grass)],
+                                Alt_ord = ord_alt_grass[rownames(lon_lat_alt_grass)])
+
+rm(ord_lon_grass, ord_lat_grass, ord_alt_grass)
+
+
+
+lon_lat_alt_for <- do.call(rbind, lapply(Matched_datasets_forest, function(eco) {
+  
+  dtf <- do.call(rbind, lapply(eco, function(prd) prd[c('X_laea', 'Y_laea', 'Elevation')]))
+  
+  res <- apply(dtf, 2, median)
+  
+  }))
+
+
+#add ranking
+
+ord_lon_for <- sort(lon_lat_alt_for[, 'X_laea'], decreasing = F)
+ord_lon_for <- setNames(seq_along(ord_lon_for), nm = names(ord_lon_for))
+
+ord_lat_for <- sort(lon_lat_alt_for[, 'Y_laea'], decreasing = F)
+ord_lat_for <- setNames(seq_along(ord_lat_for), nm = names(ord_lat_for))
+
+ord_alt_for <- sort(lon_lat_alt_for[, 'Elevation'], decreasing = F)
+ord_alt_for <- setNames(seq_along(ord_alt_for), nm = names(ord_alt_for))
+
+
+lon_lat_alt_for <- data.frame(lon_lat_alt_for,
+                              X_ord = ord_lon_for[rownames(lon_lat_alt_for)],
+                              Y_ord = ord_lat_for[rownames(lon_lat_alt_for)],
+                              Alt_ord = ord_alt_for[rownames(lon_lat_alt_for)])
+
+rm(ord_lon_for, ord_lat_for, ord_alt_for)
+
+#save objects
+
+save(lon_lat_alt_grass, lon_lat_alt_for, file = 'tmp_obj/Lon_lat_alt_ecoregions.RData')
 
 
 
