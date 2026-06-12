@@ -3590,6 +3590,43 @@ plot(st_geometry(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% sel_ecor_an
      col = 'darkgreen', add = T)
 
 
+#----create a map showing ecoregions selected for analysis within a single plot
+
+#subset eu_ecoregions.proj to only keep selected ecoregions
+
+#all(union(sel_ecor_analysis$Grass, sel_ecor_analysis$Forest) %in% eu_ecoregions.proj$ECO_NAME) #T
+
+exists('eu_ecor_sel') #F
+
+eu_ecor_sel <- eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% union(sel_ecor_analysis$Grass, sel_ecor_analysis$Forest), 'ECO_NAME']
+
+#create a column to indicate the ecoregions that are either forest or grasslands, and that are included in analyses for both grasslands and forests
+
+eu_ecor_sel$g_f_gANDf <- vector(mode = 'character', length = nrow(eu_ecor_sel))
+
+#both grassland and forests
+eu_ecor_sel[eu_ecor_sel$ECO_NAME %in% intersect(sel_ecor_analysis$Grass, sel_ecor_analysis$Forest), 'g_f_gANDf'] <- 'grass_and_for'
+#only grasslands
+eu_ecor_sel[eu_ecor_sel$ECO_NAME %in% setdiff(sel_ecor_analysis$Grass, sel_ecor_analysis$Forest), 'g_f_gANDf'] <- 'grassland'
+#only forests
+eu_ecor_sel[eu_ecor_sel$g_f_gANDf == '', 'g_f_gANDf'] <- 'forest'
+
+#order g_f_gANDf levels
+eu_ecor_sel$g_f_gANDf <- factor(eu_ecor_sel$g_f_gANDf, levels = c('grassland', 'forest', 'grass_and_for'))
+
+map_of_sel_ecor <- ggplot() +
+  geom_sf(data = st_crop(x = eu_ecoregions.proj[, 'ECO_NAME'], y = sel_ecor_bbox)) +
+  geom_sf(data = eu_ecor_sel, aes(fill = g_f_gANDf), alpha = .8) +
+  geom_sf_label(data = eu_ecor_sel, aes(label = ECO_NAME), size = 5,
+                colour = 'black', alpha = .7, label.size = 0) +
+  scale_fill_manual(values = c('forest' = 'darkgreen', 'grassland' = 'lightgreen', 'grass_and_for' = 'aquamarine'), name = 'Ecoregions') +
+  xlab(NULL) + ylab(NULL) +
+  theme(legend.position = 'top', legend.text = element_text(size = 12), legend.title = element_text(size = 14))
+
+#saving the image to the IAVS2026 folder for the moment
+ggsave(plot = map_of_sel_ecor, filename = 'C:/MOTIVATE/Talks_and_presentations/IAVS_2026/Map_of_ecoregions.jpeg', device = 'jpeg',
+       width = 28, height = 26, units = 'cm', dpi = 300)
+
 #-------------------------------------------------rank ecoregions by altitude, longitude and latitude
 
 #the ranking is based on longitude, latitude and altitude of the vegetation plots
