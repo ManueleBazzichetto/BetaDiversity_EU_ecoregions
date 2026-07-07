@@ -1,6 +1,10 @@
 #This code processes the shapefiles of ecoregions and European land borders, as well as EVA data, to obtain the sets of
 #grassland and forest ecoregions for the analyses
 
+#clean the environment
+rm(list = ls())
+gc()
+
 #spatial analysis
 library(sf)
 library(terra)
@@ -16,13 +20,13 @@ library(future.apply)
 
 #notes
 
-#The idea is to select ecoregions that cover wide longitudinal and latitudinal gradients
+#The idea is to select ecoregions that span wide altitudinal, longitudinal and latitudinal gradients
 #the focus is on forests and grasslands, which will be analysed separately
 
 #analyses will focus on two time periods: 1980-1999 and 2000-2022
 #period-specific analyses should highlight the potential temporal change
 #in the relative importance of the drivers of taxonomic dissimilarity
-#and, at the same time, whether the change relates to the lon/lat gradient.
+#and, at the same time, whether the change relates to the alt/lon/lat gradient.
 
 #CRS used for spatial analysis:
 #ETRS89-extended / LAEA Europe (https://spatialreference.org/ref/epsg/3035/)
@@ -213,9 +217,9 @@ colnames(EVA_meta) <- gsub(pattern = '/', replacement = '_', x = colnames(EVA_me
 #check frequency of multiple habitat assignment
 as.data.frame(table(grep(pattern = ',', x = EVA_meta$Expert_system, value = T))) #3077 cases
 
-#remove exclamation marks
+#remove exclamation marks - there are not habitat types with exclamation marks, so this step can be skipped
 #identical(grep(pattern = '!', x = EVA_meta$Expert_system), grep(pattern = '!', x = EVA_meta$Expert_system, fixed = T)) #T
-EVA_meta$Expert_system <- gsub(pattern = '!', replacement = '', x = EVA_meta$Expert_system)
+#EVA_meta$Expert_system <- gsub(pattern = '!', replacement = '', x = EVA_meta$Expert_system)
 
 #empty assignments become 'X'
 length(which(EVA_meta$Expert_system == '')) #749608
@@ -336,13 +340,13 @@ nrow(LLM_classif[LLM_classif$Accuracy_for_lev2 >= 75.00, ]) #763,322
 LLM_classif <- LLM_classif[LLM_classif$Accuracy_for_lev2 >= 75.00, ]
 
 #rename the Most_likely_EUNIS_level_2_habitat field
-colnames(LLM_classif)[6] <- 'LLM_lilely_Eunis_lev2'
+colnames(LLM_classif)[6] <- 'LLM_likely_Eunis_lev2'
 
 #also rename PlotObservationID column for consistency
 colnames(LLM_classif)[1] <- 'PlotID'
 
 #select only relevant columns
-LLM_classif <- LLM_classif[c('PlotID', 'LLM_Eunis_lev1', 'LLM_lilely_Eunis_lev2', 'Accuracy_for_lev2')]
+LLM_classif <- LLM_classif[c('PlotID', 'LLM_Eunis_lev1', 'LLM_likely_Eunis_lev2', 'Accuracy_for_lev2')]
 
 #join LLM-based classification to EVA_meta. Join also classification at lev-2
 #to_del <- dplyr::left_join(x = EVA_meta, y = LLM_classif, by = 'PlotID')
@@ -952,7 +956,7 @@ table(lengths(id_ts_start[lengths(id_ts_start) > 1]))
 RS_meta[RS_meta$PlotID %in% id_ts_start[[which(lengths(id_ts_start) == 105)]], ] #RS_PROJTYP is 'resampling' though
 
 #keep the ids of plots that start the time series in EVA
-#to do so, exclude ids of these 'starting' plots from the set of ids in RS_meta, the remaining plot ids (not starting plots) can be filtered put from EVA_meta
+#to do so, exclude ids of these 'starting' plots from the set of ids in RS_meta, the remaining plot ids (not starting plots) can be filtered out from EVA_meta
 
 #unlist id_ts_start to obtain a vector of ids of 'starting plots'
 id_ts_start <- unlist(id_ts_start)
@@ -983,6 +987,7 @@ save(EVA_meta, RS_meta, EVA_meta.sp, file = '/MOTIVATE/GDM_EuropeanEcoregions/tm
 
 #--delete objects that are not used eventually
 
+##FROM HERE!!!!!!!
 
 #--check on (spatial) duplicates
 
