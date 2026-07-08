@@ -987,7 +987,7 @@ save(EVA_meta, RS_meta, EVA_meta.sp, file = '/MOTIVATE/GDM_EuropeanEcoregions/tm
 
 #--delete objects that are not used eventually
 
-##FROM HERE!!!!!!!
+
 
 #--check on (spatial) duplicates
 
@@ -1041,23 +1041,28 @@ table(RS_meta.sp$Period) #period1: 11,710; period2: 71,369
 
 #!!this check is implemented on EVA and RS together as true duplicates should be detected across (and removed from) the whole dataset
 
-#import EVA data on community composition
-EVA_veg <- fread('C://MOTIVATE/EVA_dataset/200_Motivate20250415_taxa_concepts_unified.csv', data.table = FALSE)
+#import EVA data on community composition - this is the dataset created in the NomenTaxonCleaning project
+#the dataset is stored as an .RData object and includes only columns relevant for the analyses
+#the Species_name column includes species names according to the ESy nomenclature
+#non-vascular plants, unidentified species and species identified at the family level have been excluded
+#also, PlotID with >= 25% species identified at the genus or higher tax level were excluded
 
-#select only relevant columns
-EVA_veg <- EVA_veg[c("PlotObservationID", "Matched concept corrected", "Cover %", "Layer")]
+#the object is named 'EVA_veg'
+exists('EVA_veg') #F
 
-#rename columns
-colnames(EVA_veg)[c(1, 2, 3)] <- c('PlotID', 'Species_name', 'Cover_perc')
+load("C://MOTIVATE/EVA_dataset/NomenTaxonCleaning/EVA_species_data_esy.RData")
 
+#check class and str
+class(EVA_veg)
+str(EVA_veg)
 #check NA
 anyNA(EVA_veg) #FALSE
 #check values of Layer field
 sort(unique(EVA_veg$Layer)) #from 0 to 9
 
 #check if all plots in EVA_meta.sp and RS_meta.sp are contained in EVA_veg
-sum(!EVA_meta.sp$PlotID %in% unique(EVA_veg$PlotID)) #382
-sum(!RS_meta.sp$PlotID %in% unique(EVA_veg$PlotID)) #729
+sum(!EVA_meta.sp$PlotID %in% unique(EVA_veg$PlotID)) #11,927
+sum(!RS_meta.sp$PlotID %in% unique(EVA_veg$PlotID)) #1,008
 
 EVA_meta.sp[which(!EVA_meta.sp$PlotID %in% unique(EVA_veg$PlotID)), ]
 
@@ -1065,15 +1070,15 @@ EVA_meta.sp[which(!EVA_meta.sp$PlotID %in% unique(EVA_veg$PlotID)), ]
 1 %in% EVA_veg$PlotID #FALSE
 
 #and vice-versa -> although this is possible since I removed quite a few plots from EVA_/RS_meta.sp that should still be present in EVA_veg
-sum(!unique(EVA_veg$PlotID) %in% EVA_meta.sp$PlotID) #1097451
-sum(!unique(EVA_veg$PlotID) %in% RS_meta.sp$PlotID) #2325435
+sum(!unique(EVA_veg$PlotID) %in% EVA_meta.sp$PlotID) #1,092,490
+sum(!unique(EVA_veg$PlotID) %in% RS_meta.sp$PlotID) #2,309,208
 
 #save PlotID that are present in EVA_meta.sp and RS_meta.sp but are not present in EVA_veg
 #I won't be able to use these plots since there's no data on the vegetation
 EVA_plots_not_in_veg <- setdiff(EVA_meta.sp$PlotID, unique(EVA_veg$PlotID))
 RS_plots_not_in_veg <- setdiff(RS_meta.sp$PlotID, unique(EVA_veg$PlotID))
 
-length(EVA_plots_not_in_veg) + length(RS_plots_not_in_veg) #1111 (382+729)
+length(EVA_plots_not_in_veg) + length(RS_plots_not_in_veg) #12,935 (11,927+1,008)
 all(!c(EVA_plots_not_in_veg, RS_plots_not_in_veg) %in% unique(EVA_veg$PlotID)) #T
 sum(duplicated(EVA_plots_not_in_veg)) #0
 sum(duplicated(RS_plots_not_in_veg)) #0
@@ -1089,17 +1094,59 @@ RS_meta.sp <- RS_meta.sp[!RS_meta.sp$PlotID %in% RS_plots_not_in_veg, ]
 intersect(x = EVA_meta.sp$PlotID, y = RS_meta.sp$PlotID) #integer(0)
 EVA_veg <- EVA_veg[EVA_veg$PlotID %in% c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID), ]
 
+nrow(EVA_veg) #26,382,426 (from 44,451,698)
+
 #fine, EVA_veg has the same plots that are included in EVA_meta.sp and RS_meta.sp
-length(unique(EVA_veg$PlotID)) #1,392,684
-length(EVA_meta.sp$PlotID) + length(RS_meta.sp$PlotID) #1,392,684
+length(unique(EVA_veg$PlotID)) #1,380,860
+length(EVA_meta.sp$PlotID) + length(RS_meta.sp$PlotID) #1,380,860
 setdiff(x = unique(EVA_veg$PlotID), y = c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID)) #0
 setdiff(x = c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID), y = unique(EVA_veg$PlotID)) #0
 
 #aggregate species' cover data in case there are multiple records for the same species within a plot
 
+#more specifically, aggregate cover data from the same species in the same plot and layer (this can happen because of the esy classification)
+#and then aggregate cover data from the same species in the same plot but across different layers
+
+#in case of the same species in the same layer and plot, the cover data are summed up
+#in case of the same species in the same plot but across different layers, the cover data are aggregated using the combine.cover function
+
 #set EVA_veg as a data.table for fast manipulation of the dataset
 #using setDT avoids storing a copy of EVA_veg (as when using as.data.table)
 setDT(EVA_veg)
+
+#count how many cases have the same species name occurs multiple times in the same plot and layer
+nrow(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][N > 1]) #43,412
+
+#check max times this happens
+max(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][N > 1, N]) #10 (!)
+
+#check range of occurrences
+range(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][, N]) #1 10
+#check distribution and number of cases for each N
+quantile(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][, N])
+table(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][, N])
+
+#this should be the final number of rows of the dataset with cover data summed up for same species occurring mult. times in the same plot and layer
+sum(table(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][, N])) #26,335,565 (which means a loss of 46,861 rows due to species aggregation)
+
+#check extreme cases
+EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][N == 10, PlotID] #1356736 1554248
+
+EVA_veg[PlotID %in% c(1356736, 1554248)] #several occurrences of Rubus fruticosus aggr. in the same layer and plot
+
+#count in how many plots this happens
+length(unique(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][N > 1, PlotID])) #41,401
+
+#see some other example
+#PlotID 462 -> 2 Luzula campestris aggr. in Layer 0 with cover 3 and 2
+#PlotID 508 -> 2 Cystopteris fragilis in Layer 0 with cover 2 and 2
+ex_plots_spdup_inlyr <- EVA_veg[PlotID %in% c(462, 463, 508)]
+
+#####FROM HERE!!!!!
+
+#sum up cover values for the same species name 
+EVA_veg[, .(Cover_perc = if(sum(Cover_perc) > 100) 100 else sum(Cover_perc)), by = .(PlotID, Layer, Species_name)]
+
 
 #count number of plots having multiple records for the same species
 nrow(EVA_veg[, if(any(duplicated(Species_name))) 1L else 0L, by = PlotID][V1 == 1L]) #217,510 plots with at least one duplicated species
