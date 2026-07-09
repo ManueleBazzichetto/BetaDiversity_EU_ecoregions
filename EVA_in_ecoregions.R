@@ -1114,7 +1114,9 @@ setdiff(x = c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID), y = unique(EVA_veg$PlotID)
 #using setDT avoids storing a copy of EVA_veg (as when using as.data.table)
 setDT(EVA_veg)
 
-#count how many cases have the same species name occurs multiple times in the same plot and layer
+#----- 1) sum up species cover in the same layer and plot
+
+#count how many cases with the same species name occurring multiple times in the same plot and layer
 nrow(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][N > 1]) #43,412
 
 #check max times this happens
@@ -1142,14 +1144,35 @@ length(unique(EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][N > 1, PlotID])
 #PlotID 508 -> 2 Cystopteris fragilis in Layer 0 with cover 2 and 2
 ex_plots_spdup_inlyr <- EVA_veg[PlotID %in% c(462, 463, 508)]
 
-#####FROM HERE!!!!!
+#check if the sum of cover per plot is the same after aggregating (summing up) cover of duplicated species in the same layer and plot
+#of course, there will be cases where the sum of covers are different because cover is forced to max 100 if the species-specific sum is above that value
+to_del <- EVA_veg[, .(Cover_perc = if(sum(Cover_perc) > 100) 100 else sum(Cover_perc)), by = .(PlotID, Layer, Species_name)]
+to_del <- to_del[, .(Cover_perc = sum(Cover_perc)), by = PlotID]
 
-#sum up cover values for the same species name 
-EVA_veg[, .(Cover_perc = if(sum(Cover_perc) > 100) 100 else sum(Cover_perc)), by = .(PlotID, Layer, Species_name)]
+#compare with waldo! Differences (more than 550) in cover occur in: 45477 (PlotID: 309967), 45492 (309982), 45493 (309983), 45494 (309984), 45495 (309985), ..., 112030 (452369)
+waldo::compare(to_del, EVA_veg[, .(Cover_perc = sum(Cover_perc)), by = PlotID])
 
+#check how many cases of plots having all 100 Cover_perc
+sum(EVA_veg[, .(All_cov_100 = if(all(Cover_perc == 100)) TRUE else FALSE), by = PlotID][, All_cov_100]) #94
+
+#rm to_del
+rm(to_del)
+
+#sum up cover values for the same species name in the same plot and layer - force max cover to be 100
+EVA_veg <- EVA_veg[, .(Cover_perc = if(sum(Cover_perc) > 100) 100 else sum(Cover_perc)), by = .(PlotID, Layer, Species_name)]
+
+#check nrow
+nrow(EVA_veg) #26,335,565 [CORRECT]
+#check range of Cover_perc
+range(EVA_veg$Cover_perc) #0 100 [CORRECT]
+
+#sanity check - see if it reamins some cases of species with multiple occurrences in the same layer and plot
+EVA_veg[, .N, by = .(PlotID, Layer, Species_name)][N > 1] #empty
+
+#----- 2) aggregate species cover in the same plot but across different layers
 
 #count number of plots having multiple records for the same species
-nrow(EVA_veg[, if(any(duplicated(Species_name))) 1L else 0L, by = PlotID][V1 == 1L]) #217,510 plots with at least one duplicated species
+nrow(EVA_veg[, if(any(duplicated(Species_name))) 1L else 0L, by = PlotID][V1 == 1L]) #213,863 plots with at least one duplicated species
 
 #get plot ids with duplicated species names (and different Layer values)
 EVA_veg[, .(IDs = paste(which(duplicated(Species_name)), collapse = '-'), DiffLyr = if(uniqueN(Layer) == 1) 0L else 1L ), by = PlotID][IDs != '' & DiffLyr != 0L, 'PlotID']
@@ -1175,6 +1198,12 @@ combine.cover <- function(x) {
 #order of values does not affect result of combine.cover
 #replicate(n = 5, combine.cover(x = c(1, 30, 50, 22, 12)[sample(5)]), simplify = T)
 
+#check what happens if one or more cover values are 100
+#combine.cover(x = c(100, 30, 50, 22, 12)) #100
+#combine.cover(x = c(1, 30, 100, 22, 12)) #100
+#combine.cover(x = c(1, 30, 50, 22, 100)) #100
+#combine.cover(x = c(100, 100, 100, 100, 100)) #100
+
 #aggregate cover data
 EVA_veg <- EVA_veg[, .(Cover_perc = combine.cover(Cover_perc)), by = .(PlotID, Species_name)]
 
@@ -1182,10 +1211,17 @@ EVA_veg <- EVA_veg[, .(Cover_perc = combine.cover(Cover_perc)), by = .(PlotID, S
 #ex_plots_sp_dup[PlotID == 3601]
 #EVA_veg[PlotID == 3601]
 
+#check nrow
+nrow(EVA_veg) #25,629,334
+
 #identify groups of duplicated plots
 
 #rbind EVA_meta.sp and RS_meta.sp to detect true duplicates over the whole dataset
 identical(colnames(EVA_meta.sp), colnames(RS_meta.sp)) #T
+
+#check all plots remaining in EVA_veg are included in EVA_meta.sp and RS_meta.sp
+all(unique(EVA_veg[, PlotID]) %in% c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID)) #TRUE
+all(c(EVA_meta.sp$PlotID, RS_meta.sp$PlotID) %in% unique(EVA_veg[, PlotID])) #TRUE
 
 #rbind EVA_meta.sp and RS_meta.sp to work on whole dataset
 EVA_RS_sp <- rbind(EVA_meta.sp, RS_meta.sp)
@@ -1196,7 +1232,7 @@ EVA_RS_true_duply <- st_equals(EVA_RS_sp)
 #find unique groups of duplicated points
 
 #count number of groups of plots (at least two duplicates)
-sum(lengths(EVA_RS_true_duply) > 1) #810141 - note that this number counts multiple time the same combination of duplicates
+sum(lengths(EVA_RS_true_duply) > 1) #801,025 - note that this number counts multiple time the same combination of duplicates
 
 #first subset EVA_RS_true_duply to only keep groups of plots (at least two duplicates)
 EVA_RS_true_duply <- EVA_RS_true_duply[lengths(EVA_RS_true_duply) > 1]
@@ -1218,10 +1254,10 @@ EVA_RS_true_duply <- lapply(EVA_RS_true_duply, function(grp) {
 EVA_RS_true_duply <- unlist(EVA_RS_true_duply)
 
 #check how many duplicates
-sum(duplicated(EVA_RS_true_duply)) #659,008
+sum(duplicated(EVA_RS_true_duply)) #650,948
 
 #keep only unique sets
-EVA_RS_true_duply <- unique(EVA_RS_true_duply) #151,133
+EVA_RS_true_duply <- unique(EVA_RS_true_duply) #150,077
 
 #transform EVA_RS_true_duply to a list of groups of plot ids (coerced to integer)
 EVA_RS_true_duply <- lapply(EVA_RS_true_duply, function(grp) {
@@ -1240,7 +1276,7 @@ EVA_RS_true_duply <- lapply(EVA_RS_true_duply, function(grp) {
 sum(lengths(EVA_RS_true_duply) < 2) #0 (nope)
 
 #number of plots
-sum(lengths(EVA_RS_true_duply)) #810,141 (this is the number of plots having at least a duplicate)
+sum(lengths(EVA_RS_true_duply)) #801,025 (this is the number of plots having at least a duplicate)
 
 #now exclude from EVA_RS_true_duply the plot ids that are unique in terms of Sampl_year
 #true duplicates are indeed associated with the same Sampl_year
@@ -1272,7 +1308,7 @@ setDT(EVA_RS_true_duply)
 grp_with_duply <- EVA_RS_true_duply[, .(HasDupYear = if(any(duplicated(Sampl_year))) TRUE else FALSE), by = .(GrpID)][which(HasDupYear), GrpID]
 
 #check how many groups have at least a duplicate for year
-length(grp_with_duply) #99,454 (out of 151,133 groups)
+length(grp_with_duply) #98,652 (out of 150,077 groups)
 
 #check
 EVA_RS_true_duply[GrpID %in% grp_with_duply[10]]
@@ -1296,7 +1332,7 @@ EVA_veg_more1sp <- EVA_veg_sub[, .N, by = PlotID]
 
 EVA_veg_more1sp <- EVA_veg_more1sp[N > 1, PlotID]
 
-length(EVA_veg_more1sp) #634,121
+length(EVA_veg_more1sp) #624,133
 
 #subset both EVA_veg_sub and EVA_RS_true_duply to keep plots in EVA_veg_more1sp
 EVA_veg_sub <- EVA_veg_sub[PlotID %in% EVA_veg_more1sp]
@@ -1317,22 +1353,22 @@ EVA_RS_true_duply <- EVA_veg_sub[EVA_RS_true_duply, on = 'PlotID']
 EVA_RS_true_duply <- EVA_RS_true_duply[, .(PlotList = list(PlotID)), by = .(GrpID, Sampl_year, PlotComp)]
 
 #check how many cases of true duplicates
-sum(lengths(EVA_RS_true_duply$PlotList) > 1) #8,024
+sum(lengths(EVA_RS_true_duply$PlotList) > 1) #10,340
 
 #subset EVA_RS_true_duply to keep only elements with true duplicates
 EVA_RS_true_duply <- EVA_RS_true_duply[lengths(EVA_RS_true_duply[, PlotList]) > 1]
 
-#number of true duplicates
-length(unlist(EVA_RS_true_duply$PlotList)) #16,893
+#number of true duplicates (there could be multiple true duplicates in the same element of the list)
+length(unlist(EVA_RS_true_duply$PlotList)) #21,713
 
 #check distribution of sizes of groups of true duplicates
 range(lengths(EVA_RS_true_duply$PlotList)) #2 70
 table(lengths(EVA_RS_true_duply$PlotList)) #groups are mostly constituted by 2 plots
 
 #one group has 70 true duplicates (!) in 2005
-EVA_RS_true_duply[lengths(EVA_RS_true_duply$PlotList) == 70] #Grp_83539
+EVA_RS_true_duply[lengths(EVA_RS_true_duply$PlotList) == 70] #Grp_83018
 
-#notice that there might be multiple groups of true duplicates for the same year in Grp_83539
+#notice that there might be multiple groups of true duplicates for the same year in Grp_83018
 EVA_meta[EVA_meta$PlotID %in% unlist(EVA_RS_true_duply[lengths(EVA_RS_true_duply$PlotList) == 70, PlotList]), ] #looks like these are all in EVA
 
 #get id of plots to remove to exclude true duplicates
@@ -1342,7 +1378,7 @@ plot_ids_trued <- EVA_RS_true_duply[, PlotList]
 
 #keep only first plot ids of each group
 #there should remain sum(lengths(plot_ids_trued) - 1)
-sum(lengths(plot_ids_trued)) #16,893
+sum(lengths(plot_ids_trued)) #21,713
 
 plot_ids_drop <- lapply(plot_ids_trued, function(id) {
   
@@ -1353,8 +1389,8 @@ plot_ids_drop <- lapply(plot_ids_trued, function(id) {
 })
 
 #check [RIGHT]
-sum(lengths(plot_ids_trued) - 1) #8,869
-length(unlist(plot_ids_drop)) #8,869
+sum(lengths(plot_ids_trued) - 1) #11,373
+length(unlist(plot_ids_drop)) #11,373
 
 #unlist plot_ids_drop
 plot_ids_drop <- unlist(plot_ids_drop)
