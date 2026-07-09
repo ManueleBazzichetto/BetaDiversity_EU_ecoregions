@@ -1405,8 +1405,8 @@ plot_ids_drop <- unlist(plot_ids_drop)
 class(EVA_meta.sp); class(RS_meta.sp) #sf data.frame
 
 #check how many true duplicates are contained in the two data.frames
-sum(EVA_meta.sp$PlotID %in% plot_ids_drop) #8,658 - nearly the total number of plots
-sum(RS_meta.sp$PlotID %in% plot_ids_drop) #211
+sum(EVA_meta.sp$PlotID %in% plot_ids_drop) #10,991 - nearly the total number of plots
+sum(RS_meta.sp$PlotID %in% plot_ids_drop) #382
 
 #drop the plots
 EVA_meta.sp <- EVA_meta.sp[!EVA_meta.sp$PlotID %in% plot_ids_drop, ]
@@ -1431,8 +1431,8 @@ c(1, 67) %in% tmp_eco[['PlotID']] #FALSE
 tmp_eco[c(1, 67), ]
 
 lengths(tmp_eco_dup) #there are many cases of duplicates
-length(which(lengths(tmp_eco_dup) > 1)) #1423
-length(tmp_eco_dup[lengths(tmp_eco_dup) > 1]) #1423
+length(which(lengths(tmp_eco_dup) > 1)) #1,414
+length(tmp_eco_dup[lengths(tmp_eco_dup) > 1]) #1,414
 tmp_eco_dup[lengths(tmp_eco_dup) > 1]
 
 #check behavior of as.data.frame method
@@ -1521,7 +1521,7 @@ sapply(EVA_duply, function(i) lengths(i))
 length(unlist(strsplit(EVA_duply[['Corsican_montane_broadleaf_and_mixed_forests']][['period2']], split = '-')))
 
 #check NAs (if any)
-sum(sapply(EVA_duply, function(i) sum(sapply(i, anyNA)))) #9 cases
+sum(sapply(EVA_duply, function(i) sum(sapply(i, anyNA)))) #10 cases
 
 #get number of duplicates plots, i.e. plots having at least a duplicate
 EVA_num_duply <- lapply(EVA_duply, function(x) {
@@ -1599,7 +1599,7 @@ RS_duply <- lapply(unique(RS_meta.sp$ECO_NAME), function(nm) {
 ##now keep only plot ids in EVA_meta.sp and RS_meta.sp from EVA_meta and RS_meta
 class(EVA_meta); class(RS_meta) #data.frame data.frame
 nrow(EVA_meta); nrow(RS_meta) #1,310,716 83,079
-nrow(EVA_meta.sp); nrow(RS_meta.sp) #1,301,676 82,139
+nrow(EVA_meta.sp); nrow(RS_meta.sp) #1,287,798 81,689
 
 EVA_meta <- EVA_meta[EVA_meta$PlotID %in% EVA_meta.sp$PlotID, ]
 
@@ -1616,8 +1616,8 @@ range(unique(EVA_meta$Releve_area_m2), na.rm = T) #0.01 9999.99
 range(unique(RS_meta$Releve_area_m2), na.rm = T) #0.01 3000
 
 #check NAs
-sum(is.na(EVA_meta$Releve_area_m2)) #308,214 plots missing plot size
-sum(is.na(RS_meta$Releve_area_m2)) #1879
+sum(is.na(EVA_meta$Releve_area_m2)) #304,713 plots missing plot size
+sum(is.na(RS_meta$Releve_area_m2)) #1,873
 
 #drop observations with missing data for plot size
 EVA_meta <- EVA_meta[!is.na(EVA_meta$Releve_area_m2), ]
@@ -1632,20 +1632,20 @@ unique(EVA_meta$ESy_plus_LLM_lev1)
 unique(RS_meta$ESy_plus_LLM_lev1)
 
 #drop unclassified and empty fields for Eunis_lev1
-length(which(EVA_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"))) #37,209
-length(which(RS_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"))) #1018
+length(which(EVA_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"))) #33,772
+length(which(RS_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"))) #990
 
 EVA_meta <- EVA_meta[!EVA_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"), ]
 RS_meta <- RS_meta[!RS_meta$ESy_plus_LLM_lev1 %in% c("Y", "X"), ]
 
 sort(table(EVA_meta$ESy_plus_LLM_lev1)) #R (grasslands) and T (forests) are the most abundant
-sum(EVA_meta$ESy_plus_LLM_lev1 %in% c('R', 'T')) #575,270 relevés classified as either grassland or forest
-#[LLM classification made us gain 73,501 plots - for For and Gr]
-#sum(EVA_meta$Eunis_lev1 %in% c('R', 'T')) #501,769
+sum(EVA_meta$ESy_plus_LLM_lev1 %in% c('R', 'T')) #573,101 relevés classified as either grassland or forest (approx. 60%)
+#[LLM classification made us gain 73,077 plots - for For and Gr]
+#sum(EVA_meta$Eunis_lev1 %in% c('R', 'T')) #500,024
 
 sort(table(RS_meta$ESy_plus_LLM_lev1)) #R and T are still the most abundant
-sum(RS_meta$ESy_plus_LLM_lev1 %in% c('R', 'T')) #62,119
-#sum(RS_meta$Eunis_lev1 %in% c('R', 'T')) #58,481 (3,638 plots gained thanks to LLM classification - for For and Gr)
+sum(RS_meta$ESy_plus_LLM_lev1 %in% c('R', 'T')) #61,873
+#sum(RS_meta$Eunis_lev1 %in% c('R', 'T')) #58,248 (3,625 plots gained thanks to LLM classification - for For and Gr)
 
 #-period
 
@@ -1655,7 +1655,7 @@ sum(RS_meta$ESy_plus_LLM_lev1 %in% c('R', 'T')) #62,119
 
 #I'm not excluding these data at this stage, though. This can be done afterwards.
 
-sum(as.integer(EVA_meta$Sampl_year) < 1980L | as.integer(EVA_meta$Sampl_year) > 2022L) #210,909
+sum(as.integer(EVA_meta$Sampl_year) < 1980L | as.integer(EVA_meta$Sampl_year) > 2022L) #209,379
 
 
 #--match PlotID between EVA_meta, RS_meta and their corresponding .sp versions
@@ -1663,10 +1663,10 @@ sum(as.integer(EVA_meta$Sampl_year) < 1980L | as.integer(EVA_meta$Sampl_year) > 
 #difference due to plots dropped in case of missing plot size or unclassified (or empty) hab assignment in EVA_meta and RS_meta
 
 length(setdiff(EVA_meta$PlotID, EVA_meta.sp$PlotID)) #0
-length(setdiff(EVA_meta.sp$PlotID, EVA_meta$PlotID)) #345,423
+length(setdiff(EVA_meta.sp$PlotID, EVA_meta$PlotID)) #338,485
 
 length(setdiff(RS_meta$PlotID, RS_meta.sp$PlotID)) #0
-length(setdiff(RS_meta.sp$PlotID, RS_meta$PlotID)) #2,897
+length(setdiff(RS_meta.sp$PlotID, RS_meta$PlotID)) #2,863
 
 EVA_meta.sp <- EVA_meta.sp[EVA_meta.sp$PlotID %in% EVA_meta$PlotID, ]
 
@@ -1678,24 +1678,31 @@ RS_meta.sp <- RS_meta.sp[RS_meta.sp$PlotID %in% RS_meta$PlotID, ]
 
 Grass_meta <- EVA_meta[which(EVA_meta$ESy_plus_LLM_lev1 == 'R'), ]
 
-nrow(Grass_meta) #361,367
+nrow(Grass_meta) #359,866
 
 #check ecoregions including grasslands
 unique(Grass_meta$ECO_NAME) #64
 
 #drop observations with a plot size lower than 4 m^2
+#also drop observations with a plot size that is extraordinarily large (e.g., 9999.99)
 sum(is.na(Grass_meta$Releve_area_m2)) #0
 class(Grass_meta$Releve_area_m2) #num
+quantile(Grass_meta$Releve_area_m2, probs = seq(0, 1, by = 0.025)) #100 is the max size (97.5th percentile)
 
 #count how many plots will be dropped
-sum(Grass_meta$Releve_area_m2 < 4) #84,583
+sum(Grass_meta$Releve_area_m2 < 4) #83,993
+sum(Grass_meta$Releve_area_m2 > 100) #6,959
+sum(Grass_meta$Releve_area_m2 < 4 | Grass_meta$Releve_area_m2 > 100) #90,952 (83,993 + 6,959)
 
-Grass_meta <- Grass_meta[Grass_meta$Releve_area_m2 >= 4, ]
+Grass_meta <- Grass_meta[Grass_meta$Releve_area_m2 >= 4 & Grass_meta$Releve_area_m2 <= 100, ]
+
+#check nrow
+nrow(Grass_meta) #268,914
 
 #drop observations with Sampl_period not included between 1980 and 2022
 Grass_meta <- Grass_meta[as.integer(Grass_meta$Sampl_year) <= 2022 & as.integer(Grass_meta$Sampl_year) >= 1980, ]
 
-nrow(Grass_meta) #213,812
+nrow(Grass_meta) #208,781
 
 #check
 range(Grass_meta$Releve_area_m2)
@@ -1711,7 +1718,7 @@ table(Grass_meta$ECO_NAME)
 #check number of plots per ecoregion x period
 Grass_eco_prd <- as.data.frame(with(Grass_meta, table(ECO_NAME, Period)))
 
-#check how many ecoregions have sufficient data (at least 1000 per period)
+#check how many ecoregions have sufficient data (at least 1,000 observations per period)
 Grass_eco_nm <- unique(Grass_meta$ECO_NAME)
 
 #coerce ECO_NAME and Period to chr in Grass_eco_prd
@@ -1729,7 +1736,7 @@ mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', 
 #drop observations for ecoregions for which there's no sufficient data for the analyses (less than 1000 observations for each period)
 
 #observations that will be kept
-length(Grass_meta$PlotID[Grass_meta$ECO_NAME %in% Grass_eco_minN]) #168,552
+length(Grass_meta$PlotID[Grass_meta$ECO_NAME %in% Grass_eco_minN]) #165,075
 
 Grass_meta <- Grass_meta[Grass_meta$ECO_NAME %in% Grass_eco_minN, ]
 
@@ -1743,7 +1750,7 @@ Grass_meta <- Grass_meta[Grass_meta$ECO_NAME %in% Grass_eco_minN, ]
 
 #check number of cases where Eunis_lev1 and LLM_Eunis_lev1 differ
 
-ESy_vs_LLM_grass <- Grass_meta[c('Expert_system', 'Eunis_lev1', 'LLM_Eunis_lev1', 'LLM_lilely_Eunis_lev2')]
+ESy_vs_LLM_grass <- Grass_meta[c('Expert_system', 'Eunis_lev1', 'LLM_Eunis_lev1', 'LLM_likely_Eunis_lev2')]
 
 sapply(ESy_vs_LLM_grass, function(cl) sum(is.na(cl)))
 
@@ -1751,7 +1758,7 @@ sapply(ESy_vs_LLM_grass, function(cl) sum(is.na(cl)))
 ESy_vs_LLM_grass <- ESy_vs_LLM_grass[!is.na(ESy_vs_LLM_grass$LLM_Eunis_lev1), ]
 
 #count how many times Eunis_lev1 and LLM_Eunis_lev1 differ
-sum(ESy_vs_LLM_grass$Eunis_lev1 != ESy_vs_LLM_grass$LLM_Eunis_lev1) #14,615 (out of 168,552 plots in Grass_meta)
+sum(ESy_vs_LLM_grass$Eunis_lev1 != ESy_vs_LLM_grass$LLM_Eunis_lev1) #13,719 (out of 165,075 plots in Grass_meta)
 
 ESy_vs_LLM_ids <- which(ESy_vs_LLM_grass$Eunis_lev1 != ESy_vs_LLM_grass$LLM_Eunis_lev1)
 
@@ -1763,11 +1770,11 @@ table(ESy_vs_LLM_grass$Expert_system[ESy_vs_LLM_ids]) #most cases are R, followe
 
 #-
 
-#derive ESy_plus_LLM_lev2, a new field with lev-2 assignment from Expert_system (ESy) and gaps filled using LLM_lilely_Eunis_lev2 (LLM)
+#derive ESy_plus_LLM_lev2, a new field with lev-2 assignment from Expert_system (ESy) and gaps filled using LLM_likely_Eunis_lev2 (LLM)
 
 #the procedure should follow the same criterion used to derive ESy_plus_LLM_lev1
 #first derive an Eunis_lev2 column from the Expert_system field by extracting the 1st and 2nd letter
-#then fill gaps using the LLM_lilely_Eunis_lev2 field
+#then fill gaps using the LLM_likely_Eunis_lev2 field
 
 #check how many cases of multiple assignment are left in Grass_meta
 mult_ass_grass <- unique(Grass_meta$Expert_system)
@@ -1778,7 +1785,7 @@ mult_ass_grass <- mult_ass_grass[!mult_ass_grass %in% c('X', 'Y')]
 mult_ass_grass <- grep(pattern = ',', x = mult_ass_grass, value = T)
 
 #check number of multiple assignments
-sum(table(Grass_meta$Expert_system[Grass_meta$Expert_system %in% mult_ass_grass])) #64 cases (out of 168,552, including uncl and empty assign)
+sum(table(Grass_meta$Expert_system[Grass_meta$Expert_system %in% mult_ass_grass])) #64 cases (out of 165,075, including uncl and empty assign)
 
 #add Eunis_lev2 columns
 #sapply(strsplit(c('R', 'R22', 'R23,R43,R60', 'Y'), split = ','), function(i) i[1])
@@ -1799,33 +1806,33 @@ unique(Grass_meta$Eunis_lev_two) #"R"  "R1" "R3" "R2" "Y"  "R5" "R4" "R6" "X"
 
 #all observations in Grass_meta have 'R' in the ESy_plus_LLM_lev1 field
 #because this field was used to filter grassland data
-#fill gaps in Eunis_lev_two with corresponding entry in LLM_lilely_Eunis_lev2
+#fill gaps in Eunis_lev_two with corresponding entry in LLM_likely_Eunis_lev2
 #ONLY IF (!!) the entry in LLM_Eunis_lev1 is a grassland!
 #there might be a mismatch between ESy and LLM - there are multiple cases where ESy says 'R' at the lev-1, but LLM assigns another habitat type
 #the assignment for the ESy lev-2 is therefore missing for these cases, but it's available from LLM (although for a different habitat type) 
 
-#fill gaps in Eunis_lev_two with LLM_lilely_Eunis_lev2
+#fill gaps in Eunis_lev_two with LLM_likely_Eunis_lev2
 
 #check
-#unique(Grass_meta$LLM_lilely_Eunis_lev2) #there's a bit of everything here (except for 'X' and 'Y')
+#unique(Grass_meta$LLM_likely_Eunis_lev2) #there's a bit of everything here (except for 'X' and 'Y')
 #c('X', 'Y') %in% unique(Grass_meta$LLM_lilely_Eunis_lev2) #FALSE FALSE
 
 #get id position of plots with uncl or empty assignment for Eunis_lev_two, where LLM_Eunis_lev1 is 'R' and LLM_lilely_Eunis_lev2 is not NA
-LLM_lev2_id_grass <- which((Grass_meta$Eunis_lev_two %in% c('X', 'Y')) & (Grass_meta$LLM_Eunis_lev1 == 'R') & (!is.na(Grass_meta$LLM_lilely_Eunis_lev2)))
+LLM_lev2_id_grass <- which((Grass_meta$Eunis_lev_two %in% c('X', 'Y')) & (Grass_meta$LLM_Eunis_lev1 == 'R') & (!is.na(Grass_meta$LLM_likely_Eunis_lev2)))
 
-length(LLM_lev2_id_grass) #7,368
+length(LLM_lev2_id_grass) #6,768
 
-#the observations at these positions should be assigned lev-2 from LLM_lilely_Eunis_lev2
+#the observations at these positions should be assigned lev-2 from LLM_likely_Eunis_lev2
 #create a new column to differentiate between Eunis_lev_two (based on ESy) and ESy_plus_LLM_lev_two (based on both ESy and LLM)
 
 Grass_meta$ESy_plus_LLM_lev_two <- Grass_meta$Eunis_lev_two
 
-Grass_meta$ESy_plus_LLM_lev_two[LLM_lev2_id_grass] <- Grass_meta$LLM_lilely_Eunis_lev2[LLM_lev2_id_grass]
+Grass_meta$ESy_plus_LLM_lev_two[LLM_lev2_id_grass] <- Grass_meta$LLM_likely_Eunis_lev2[LLM_lev2_id_grass]
 
 unique(Grass_meta$ESy_plus_LLM_lev_two) #"R"  "R1" "R3" "R2" "R5" "R4" "R6"
 
 #essentially, all 'X' and 'Y entries in Eunis_lev_two were assigned
-sum(Grass_meta$Eunis_lev_two %in% c('X', 'Y')) #7,368
+sum(Grass_meta$Eunis_lev_two %in% c('X', 'Y')) #6,768
 
 #--quickly check if proportion of grassland types changes between periods in each ecoregion
 
@@ -1890,6 +1897,7 @@ prop_prd1_2_grass <- ggplot(Grass_type_prd_prop, aes(x = Freq_prd1, y = Freq_prd
 #check correlation
 with(Grass_type_prd_prop, cor(Freq_prd1, Freq_prd2)) #0.93
 
+##FROM HERE!!!!!!!
 
 #---------------subset EVA_meta to keep only forests
 
