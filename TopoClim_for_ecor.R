@@ -153,6 +153,8 @@ anyNA(extract(x = Cant_mf_clim[[c(1)]], y = Cant_mf[c('X_laea', 'Y_laea')])) #T
 which(is.na(extract(x = Cant_mf_clim[[c(1)]], y = Cant_mf[c('X_laea', 'Y_laea')])[[2]])) #13
 terra::extract(x = Cant_mf_clim[[c(1)]], y = Cant_mf[13, c('X_laea', 'Y_laea')], search_radius = 1000)
 
+#-----------KEEP
+
 #The function for filling gaps in climatic data can be used for both the point- and the cell-based approach
 
 #rad_meters is the argument internally passed to terra::extract(..., search_radius)
@@ -221,6 +223,8 @@ fill_climate_gap <- function(x, cl_stack, loc_id_col, from_col, to_col, rad_mete
   return(res)
   }
 
+#-----------END KEEP
+
 #debugonce(fill_climate_gap)
 
 #--------------------------get climatic data version 2 (cell based)
@@ -240,6 +244,8 @@ Cant_mf$Climate_cellID <- Cant_mf_cellID
 
 #get unique combination of cell and period (time window)
 #Cant_mf_cellxprd <- unique(data.frame(CellID = Cant_mf$Climate_cellID, TWinFrom = Cant_mf$Cl_time_start, TWinTo = Cant_mf$Sampl_year))
+
+#--------KEEP
 
 #function for extracting climatic data from cell ID(s)
 
@@ -275,6 +281,8 @@ extr_climate_eva_cells <- function(x, cl_stack, cellID_col, from_col, to_col) {
   }))
   return(res)
   }
+
+#---------END KEEP
 
 #test_start and end overwrite those used above
 test_start <- proc.time()
@@ -525,6 +533,8 @@ rm(Cant_mf_topo, topo_cells_NA, topo_cells_cnt, Cant_mf_topo_missing, Cant_rghsl
 
 table(Cant_mf$Sampl_year)
 
+#---------KEEP
+
 #1980 - 1990: assigned to 1990
 #years are otherwise assigned to closest hmi year, e.g. 1991, 1992 are assigned to 1990,
 #while 1993, 1994 to 1995
@@ -546,6 +556,7 @@ get_hmi_year <- function(x) {
 #check -> looks good
 cbind(A = get_hmi_year(x = seq.int(from = 1980, to = 2022, 1)), B = seq.int(from = 1980, to = 2022, 1))
 
+#---------END KEEP
 
 #import hmi stack
 hmi_stack_proj <- rast('HumanModificationIndex/hmi_stack_proj3035.tif')
@@ -571,6 +582,8 @@ sum(is.na(Cant_mf$Hmi_cellID)) #0
 #also add the Hmi_yr column to the ecoregion dataset (this column includes the hmi year associated with every sampling year)
 Cant_mf$Hmi_yr <- get_hmi_year(Cant_mf$Sampl_year)
 
+#-------KEEP
+
 #function for extracting value of the hmi at ecoregion locations (cell based)
 extr_hmi_eva_cells <- function(x, hmi_stack, cellID_col, hmi_yr_col) {
   require(terra)
@@ -594,6 +607,8 @@ extr_hmi_eva_cells <- function(x, hmi_stack, cellID_col, hmi_yr_col) {
   res <- data.frame(cell_and_yr, res)
   return(res)
 }
+
+#-------END KEEP
 
 #check
 extr_hmi_eva_cells(x = Cant_mf[1:10, ], hmi_stack = Cant_hmi, cellID_col = 'Hmi_cellID', hmi_yr_col = 'Hmi_yr')
@@ -631,6 +646,8 @@ plot(EVA_meta.sp[EVA_meta.sp$PlotID %in% (Cant_mf$PlotID[is.na(Cant_mf$Hmi_value
 Cant_mf_hmi_missing <- Cant_mf[which(is.na(Cant_mf$Hmi_value)), c('PlotID', 'Hmi_yr', 'X_laea', 'Y_laea')]
 
 
+#-------KEEP
+
 fill_hmi_gap <- function(x, hmi_stack, loc_id_col, rad_meters = (res(hmi_stack)[1] + 1)) {
   require(terra)
   #get plot ids
@@ -650,6 +667,8 @@ fill_hmi_gap <- function(x, hmi_stack, loc_id_col, rad_meters = (res(hmi_stack)[
   res <- data.frame(PlotID = loc_id, Hmi_yr = x[['Hmi_yr']], res)
   return(res)
 }
+
+#-------END KEEP
 
 #check
 fill_hmi_gap(x = Cant_mf_hmi_missing[1:10, ], hmi_stack = Cant_hmi, loc_id_col = 'PlotID')
