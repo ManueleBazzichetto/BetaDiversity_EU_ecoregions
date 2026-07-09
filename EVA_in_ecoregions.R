@@ -1897,30 +1897,36 @@ prop_prd1_2_grass <- ggplot(Grass_type_prd_prop, aes(x = Freq_prd1, y = Freq_prd
 #check correlation
 with(Grass_type_prd_prop, cor(Freq_prd1, Freq_prd2)) #0.93
 
-##FROM HERE!!!!!!!
-
 #---------------subset EVA_meta to keep only forests
 
 Forest_meta <- EVA_meta[which(EVA_meta$ESy_plus_LLM_lev1 == 'T'), ]
 
-nrow(Forest_meta) #213,903
+nrow(Forest_meta) #213,235
 
 #check ecoregions including forests
 unique(Forest_meta$ECO_NAME) #55
 
 #drop observations with plot size lower than 50 m^2
+#also drop observations with a plot size larger than a max value
 sum(is.na(Forest_meta$Releve_area_m2)) #0
 class(Forest_meta$Releve_area_m2) #num
+quantile(Forest_meta$Releve_area_m2, probs = seq(0, 1, by = 0.025)) #1000 is the max size (97.5th percentile)
 
 #count how many plots will be dropped
-sum(Forest_meta$Releve_area_m2 < 50) #20,849
+sum(Forest_meta$Releve_area_m2 < 50) #20,745
+sum(Forest_meta$Releve_area_m2 > 1000) #2,945
+sum(Forest_meta$Releve_area_m2 < 50 | Forest_meta$Releve_area_m2 > 1000) #23,690 (20,745+2,945)
 
-Forest_meta <- Forest_meta[Forest_meta$Releve_area_m2 >= 50, ]
+
+Forest_meta <- Forest_meta[Forest_meta$Releve_area_m2 >= 50 & Forest_meta$Releve_area_m2 <= 1000, ]
+
+#check nrow
+nrow(Forest_meta) #189,545
 
 #drop obervations with Sampl_period not included between 1980 and 2022
 Forest_meta <- Forest_meta[as.integer(Forest_meta$Sampl_year) >= 1980 & as.integer(Forest_meta$Sampl_year) <= 2022, ]
 
-nrow(Forest_meta) #140,861
+nrow(Forest_meta) #139,764
 
 #check
 range(Forest_meta$Releve_area_m2)
@@ -1936,7 +1942,7 @@ table(Forest_meta$ECO_NAME)
 #check number of plots per ecoregion x period
 Forest_eco_prd <- as.data.frame(with(Forest_meta, table(ECO_NAME, Period)))
 
-#check how many ecoregions have sufficient data (at least 1000 per period)
+#check how many ecoregions have sufficient data (at least 1,000 observations per period)
 Forest_eco_nm <- unique(Forest_meta$ECO_NAME)
 
 #coerce ECO_NAME and Period to chr in Forest_eco_prd
@@ -1951,10 +1957,10 @@ Forest_eco_prd[Forest_eco_prd$ECO_NAME %in% Forest_eco_minN, ]
 #check spatial distribution of ecoregions
 mapview(eu_ecoregions.proj[eu_ecoregions.proj$ECO_NAME %in% gsub(pattern = '_', replacement = ' ', x = Forest_eco_minN), ])
 
-#drop observations for ecoregions for which there's no sufficient data for the analyses (less than 1000 observations for each period)
+#drop observations for ecoregions for which there's no sufficient data for the analyses (less than 1,000 observations for each period)
 
 #observations that will be kept
-length(Forest_meta$PlotID[Forest_meta$ECO_NAME %in% Forest_eco_minN]) #110,732
+length(Forest_meta$PlotID[Forest_meta$ECO_NAME %in% Forest_eco_minN]) #109,827
 
 Forest_meta <- Forest_meta[Forest_meta$ECO_NAME %in% Forest_eco_minN, ]
 
@@ -1969,7 +1975,7 @@ mult_ass_for <- mult_ass_for[!mult_ass_for %in% c('X', 'Y')]
 mult_ass_for <- grep(pattern = ',', x = mult_ass_for, value = T)
 
 #check number of multiple assignments
-sum(table(Forest_meta$Expert_system[Forest_meta$Expert_system %in% mult_ass_for])) #229 (out of 110,732, including uncl and empty assign)
+sum(table(Forest_meta$Expert_system[Forest_meta$Expert_system %in% mult_ass_for])) #227 (out of 109,827, including uncl and empty assign)
 
 #add Eunis_lev2 columns
 Forest_meta$Eunis_lev_two <- vapply(strsplit(Forest_meta$Expert_system, split = ','), function(i) i[1], FUN.VALUE = character(1))
@@ -1983,30 +1989,30 @@ Forest_meta$Eunis_lev_two <- vapply(strsplit(Forest_meta$Expert_system, split = 
 
 Forest_meta$Eunis_lev_two <- substr(Forest_meta$Eunis_lev_two, start = 1, stop = 2)
 
-unique(Forest_meta$Eunis_lev_two) #"T1" "T"  "T3" "Y"  "X"  "T2"
+unique(Forest_meta$Eunis_lev_two) #"T1" "T"  "T3" "Y" "T2" "X"
 
-#fill gaps in Eunis_lev_two with LLM_lilely_Eunis_lev2
+#fill gaps in Eunis_lev_two with LLM_likely_Eunis_lev2
 
 #check
-#unique(Forest_meta$LLM_lilely_Eunis_lev2)
-#c('X', 'Y') %in% unique(Forest_meta$LLM_lilely_Eunis_lev2) #FALSE FALSE
+#unique(Forest_meta$LLM_likely_Eunis_lev2)
+#c('X', 'Y') %in% unique(Forest_meta$LLM_likely_Eunis_lev2) #FALSE FALSE
 
-#get id position of plots with uncl or empty assignment for Eunis_lev_two, where LLM_Eunis_lev1 is 'T' and LLM_lilely_Eunis_lev2 is not NA
-LLM_lev2_id_for <- which((Forest_meta$Eunis_lev_two %in% c('X', 'Y')) & (Forest_meta$LLM_Eunis_lev1 == 'T') & (!is.na(Forest_meta$LLM_lilely_Eunis_lev2)))
+#get id position of plots with uncl or empty assignment for Eunis_lev_two, where LLM_Eunis_lev1 is 'T' and LLM_likely_Eunis_lev2 is not NA
+LLM_lev2_id_for <- which((Forest_meta$Eunis_lev_two %in% c('X', 'Y')) & (Forest_meta$LLM_Eunis_lev1 == 'T') & (!is.na(Forest_meta$LLM_likely_Eunis_lev2)))
 
-length(LLM_lev2_id_for) #6,370
+length(LLM_lev2_id_for) #5,769
 
 #the observations at these positions should be assigned lev-2 from LLM_lilely_Eunis_lev2
 #create a new column to differentiate between Eunis_lev_two (based on ESy) and ESy_plus_LLM_lev_two (based on both ESy and LLM)
 
 Forest_meta$ESy_plus_LLM_lev_two <- Forest_meta$Eunis_lev_two
 
-Forest_meta$ESy_plus_LLM_lev_two[LLM_lev2_id_for] <- Forest_meta$LLM_lilely_Eunis_lev2[LLM_lev2_id_for]
+Forest_meta$ESy_plus_LLM_lev_two[LLM_lev2_id_for] <- Forest_meta$LLM_likely_Eunis_lev2[LLM_lev2_id_for]
 
 unique(Forest_meta$ESy_plus_LLM_lev_two) #"T1" "T"  "T3" "T2"
 
 #essentially, all 'X' and 'Y entries in Eunis_lev_two were assigned
-sum(Forest_meta$Eunis_lev_two %in% c('X', 'Y')) #6,370
+sum(Forest_meta$Eunis_lev_two %in% c('X', 'Y')) #5,769
 
 #--quickly check if proportion of forest types changes between periods in each ecoregion
 
@@ -2071,13 +2077,9 @@ prop_prd1_2_for <- ggplot(For_type_prd_prop, aes(x = Freq_prd1, y = Freq_prd2, c
 #check correlation
 with(For_type_prd_prop, cor(Freq_prd1, Freq_prd2)) #0.96
 
-
-
-
-
 #-- check species with 0 cover in EVA_veg
 
-
+#this check will be performed at a later stage
 
 #-- save EVA_duply
 
