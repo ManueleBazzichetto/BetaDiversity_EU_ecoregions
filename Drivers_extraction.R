@@ -386,8 +386,6 @@ rm(Grass_hmi_cellID, Grass_hmi, Grass_hmi_missing)
 #save Grass_meta - note that this object still contains NAs for the environmental drivers
 save(Grass_meta, file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Grass_selection_meta.RData')
 
-###FROM HERE!!!!!!
-
 #----------------------------------Forests
 
 #check that Forest_meta only includes ecoregions in Forest_eco_minN
@@ -418,11 +416,11 @@ test_start <- proc.time()
 Forest_clmd <- extr_climate_eva_cells(x = Forest_meta, cl_stack = clim_stack_proj,
                                          cellID_col = 'Climate_cellID', from_col = 'Cl_time_start', to_col = 'Sampl_year')
 
-test_end <- proc.time() - test_start #approx 15 mins
+test_end <- proc.time() - test_start #approx 17 mins
 
 #check number and position of missing values
-sum(is.na(Forest_clmd$Prcp)) #835 (out of 53,878)
-sum(is.na(Forest_clmd$Tavg)) #746
+sum(is.na(Forest_clmd$Prcp)) #827 (out of 53,534)
+sum(is.na(Forest_clmd$Tavg)) #738
 
 setdiff(which(is.na(Forest_clmd$Prcp)), which(is.na(Forest_clmd$Tavg))) #89 cells
 setdiff(which(is.na(Forest_clmd$Tavg)), which(is.na(Forest_clmd$Prcp))) #0 cell
@@ -438,8 +436,8 @@ Forest_meta <- dplyr::left_join(x = Forest_meta, y = Forest_clmd, by = c('Climat
                                                                                   'Sampl_year' = 'Cl_time_end'))
 
 #check number of locations with NA for Prcp and/or Tavg
-sum(is.na(Forest_meta$Prcp)) #1512
-sum(is.na(Forest_meta$Tavg)) #1391
+sum(is.na(Forest_meta$Prcp)) #1,469
+sum(is.na(Forest_meta$Tavg)) #1,348
 
 
 #plot ids for which both Prcp and Tavg are NA
@@ -469,8 +467,8 @@ Cl_missing_loc.for <- fill_climate_gap(x = Cl_missing_loc.for, cl_stack = clim_s
 
 
 #check remaining NAs
-sum(is.na(Cl_missing_loc.for$Prcp)) #1045
-sum(is.na(Cl_missing_loc.for$Tavg)) #970
+sum(is.na(Cl_missing_loc.for$Prcp)) #1,007
+sum(is.na(Cl_missing_loc.for$Tavg)) #932
 identical(which(is.na(Cl_missing_loc.for$Prcp)), which(is.na(Cl_missing_loc.for$Tavg))) #FALSE
 
 #fill in data
@@ -484,8 +482,8 @@ for(i in Cl_missing_loc.for$PlotID) {
 rm(i)
 
 #check
-sum(is.na(Forest_meta$Prcp)) #1166 (1045 + 121 unique to Prcp)
-sum(is.na(Forest_meta$Tavg)) #970
+sum(is.na(Forest_meta$Prcp)) #1,128 (1,007 + 121 unique to Prcp)
+sum(is.na(Forest_meta$Tavg)) #932
 
 #check Sampl_year of obs for which Prcp is missing
 table(Forest_meta[Forest_meta$PlotID %in% Prcp_missing_loc.for, 'Sampl_year']) #these are from different Sampl_year (although mostly from 2019)
@@ -546,7 +544,7 @@ Prcp_missing_loc.for$Prcp <- missing_over_time_prcp$Prcp_val
 #Tavg_missing_loc.for$Tavg <- tavg_tmp
 
 #fill gaps in Forest_meta
-sum(is.na(Forest_meta$Prcp)) #1166
+sum(is.na(Forest_meta$Prcp)) #1,128
 #sum(is.na(Forest_meta$Tavg)) #
 
 for(i in Prcp_missing_loc.for$PlotID) {
@@ -562,12 +560,13 @@ rm(i)
 #rm(i)
 
 #remaining NAs
-sum(is.na(Forest_meta$Prcp)) #1132 (out of 110,732)
-sum(is.na(Forest_meta$Tavg)) #970
+sum(is.na(Forest_meta$Prcp)) #1,094 (out of 109,827)
+sum(is.na(Forest_meta$Tavg)) #932
 
 #remove objects created to get climate data
 rm(Forest_cl_cellID, test_start, Forest_clmd, test_end, Cl_missing_loc.for, Prcp_missing_loc.for, prcp_tmp, missing_over_time_prcp)
 
+####FROM HERE!!!!!!!!!!
 
 #----------------extract Geomorpho90m topography data
 
