@@ -566,8 +566,6 @@ sum(is.na(Forest_meta$Tavg)) #932
 #remove objects created to get climate data
 rm(Forest_cl_cellID, test_start, Forest_clmd, test_end, Cl_missing_loc.for, Prcp_missing_loc.for, prcp_tmp, missing_over_time_prcp)
 
-####FROM HERE!!!!!!!!!!
-
 #----------------extract Geomorpho90m topography data
 
 #create the Topo_cellID column
@@ -586,7 +584,7 @@ Forest_topo <- extract(topo_stack_proj, y = unique(Forest_meta$Topo_cellID))
 Forest_topo$CellID <- unique(Forest_meta$Topo_cellID)
 
 #check NAs
-sapply(Forest_topo[c(1, 2, 3)], function(cl) sum(is.na(cl))) #Elev: 36; Rough: 55; Slope: 55
+sapply(Forest_topo[c(1, 2, 3)], function(cl) sum(is.na(cl))) #Elev: 36; Rough: 54; Slope: 54
 
 #Roughness and slope have NAs at the same position
 identical(which(is.na(Forest_topo$Roughness)), which(is.na(Forest_topo$Slope))) #TRUE
@@ -595,7 +593,7 @@ identical(which(is.na(Forest_topo$Roughness)), which(is.na(Forest_topo$Slope))) 
 Forest_meta <- dplyr::left_join(x = Forest_meta, y = Forest_topo, by = c('Topo_cellID' = 'CellID'))
 
 #check number of locations with NAs
-sapply(Forest_meta[c('Elevation', 'Roughness', 'Slope')], function(cl) sum(is.na(cl))) #Elev: 78; Rough: 100; Slope: 100
+sapply(Forest_meta[c('Elevation', 'Roughness', 'Slope')], function(cl) sum(is.na(cl))) #Elev: 78; Rough: 97; Slope: 97
 
 #check overlap of locations missing topo values
 length(intersect(which(is.na(Forest_meta$Elevation)), which(is.na(Forest_meta$Roughness)))) #53
@@ -627,9 +625,9 @@ Forest_rghslo_missing <- data.frame(PlotID = Forest_rghslo_missing$PlotID,
 Forest_rghslo_missing <- Forest_rghslo_missing[c('PlotID', 'Roughness', 'Slope')]
 
 #exclude NAs
-identical(which(is.na(Forest_rghslo_missing$Roughness)), which(is.na(Forest_rghslo_missing$Slope)))
+identical(which(is.na(Forest_rghslo_missing$Roughness)), which(is.na(Forest_rghslo_missing$Slope))) #TRUE
 
-Forest_rghslo_missing <- Forest_rghslo_missing[!is.na(Forest_rghslo_missing$Roughness), ] #49 values remaining out of 100
+Forest_rghslo_missing <- Forest_rghslo_missing[!is.na(Forest_rghslo_missing$Roughness), ] #48 values remaining out of 97
 
 #fill in gaps in Forest_meta
 
@@ -658,8 +656,8 @@ for(i in Forest_rghslo_missing$PlotID) {
 rm(i)
 
 #check
-sum(is.na(Forest_meta$Roughness)) #51 (100 - 49)
-sum(is.na(Forest_meta$Slope)) #51
+sum(is.na(Forest_meta$Roughness)) #49 (97 - 48)
+sum(is.na(Forest_meta$Slope)) #49
 
 rm(Forest_topo_cellID, Forest_topo, Forest_elev_missing, Forest_rghslo_missing)
 
@@ -683,14 +681,14 @@ test_start <- proc.time()
 
 Forest_hmi <- extr_hmi_eva_cells(x = Forest_meta, hmi_stack = hmi_stack_proj, cellID_col = 'Hmi_cellID', hmi_yr_col = 'Hmi_yr') 
 
-test_end <- proc.time() - test_start #approx 7 mins
+test_end <- proc.time() - test_start #approx 10 mins
 
 #join hmi data to Forest_meta
 
 Forest_meta <- dplyr::left_join(x = Forest_meta, y = Forest_hmi, by = c('Hmi_cellID' = 'CellID', 'Hmi_yr' = 'Hmi_yr'))
 
 #check number of locations with NA
-sum(is.na(Forest_meta$Hmi_value)) #1520
+sum(is.na(Forest_meta$Hmi_value)) #1,510
 
 #get coordinates of locations with NA
 Forest_hmi_missing <- Forest_meta[which(is.na(Forest_meta$Hmi_value)), c('PlotID', 'Hmi_yr', 'X_laea', 'Y_laea')]
