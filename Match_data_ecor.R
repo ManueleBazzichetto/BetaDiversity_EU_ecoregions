@@ -1,5 +1,4 @@
-#this code provides an example on how to run statistical matching on a test ecoregion,
-#and on ecoregions belonging to habitat type 'R' (grasslands) and 'T' (forests)
+#This script includes R code to run statistical matching on grassland- (habitat type 'R') and forest-ecoregions (habitat type 'T')
 
 library(data.table)
 library(sf)
@@ -21,7 +20,7 @@ library(ggpubr)
 #in samples' covariates rather than, e.g. an increase in the importance of anthropogenic
 #pressures over time.
 
-#at this stage, true duplicates, that is relevés with identical Sampl_year, coordinates and plant composition
+#at this stage, true duplicates, that is relevés with identical Sampl_year, coordinates, plant composition and rel. abundances
 #have been already excluded.
 
 library(MatchIt) #installed on Oct. 24th 2025
@@ -128,7 +127,7 @@ check_match_performance <- function(mobj, smd_thr = 0.1, var_thrs = c(0.5, 2)) {
   smd <- m_stats[, 'Std. Mean Diff.']
   
   #check smd is always below ths
-  if(!(all(smd <= smd_thr))) stop(paste('SMD > than', smd_thr, 'detected!', sep = ' '))
+  if(!(all(abs(smd) <= smd_thr))) stop(paste('SMD > than', smd_thr, 'detected!', sep = ' '))
   
   #compute average of abs smd
   avg_smd <- mean(abs(smd))
@@ -171,7 +170,7 @@ check_match_performance <- function(mobj, smd_thr = 0.1, var_thrs = c(0.5, 2)) {
 
 #-------------------------------------------------statistical matching of grasslands
 
-grass_col_to_use <- c('PlotID', 'ESy_plus_LLM_lev1', 'EunisVerbose_lev1', 'Sampl_year', 'X_laea', 'Y_laea', 'Period', 'Prcp', 'Tavg',
+grass_col_to_use <- c('PlotID', 'Releve_area_m2', 'ESy_plus_LLM_lev1', 'EunisVerbose_lev1', 'Sampl_year', 'X_laea', 'Y_laea', 'Period', 'Prcp', 'Tavg',
                       'Elevation', 'Roughness', 'Slope', 'Hmi_value')
 
 #remove observations for which env data are missing (NA) - I should drop NAs for all env variables, including those not used for matching
@@ -186,7 +185,7 @@ sapply(Grass_meta[env_var_nm], function(cl) sum(is.na(cl)))
 
 grass_loc_to_drop <- complete.cases(Grass_meta[env_var_nm])
 
-sum(!grass_loc_to_drop) #1485 (out of 168,552)
+sum(!grass_loc_to_drop) #1,465 (out of 165,075)
 
 Grass_meta <- Grass_meta[grass_loc_to_drop, ]
 
@@ -199,7 +198,7 @@ sum(is.na(Grass_meta$Period)) #0
 
 #check plot size
 sum(is.na(Grass_meta$Releve_area_m2)) #0
-range(Grass_meta$Releve_area_m2) #4 9600
+range(Grass_meta$Releve_area_m2) #4 100
 sort(table(Grass_meta$Releve_area_m2))
 
 #check abundance of observations for the different ecoregions
@@ -268,16 +267,16 @@ ggplot(Grass_meta, aes(x = Slope, y = Roughness, col = ECO_NAME)) +
 formula_for_matchit <- as.formula("Period_bin ~ Elevation + Roughness")
 
 #create a vector of seeds for genetic algorithm
-#set.seed()
+set.seed(7485)
 
 grass_seeds <- round(runif(n = length(Grass_sel_ecor), min = 1, max = 1000), digits = 0)
 
 grass_seeds <- setNames(object = grass_seeds, nm = names(Grass_sel_ecor))
 
 #Alps_cmf  Baltic_mf    Carp_mf  Celtic_bf   CenEu_mf   EuAtl_mf ItaScl_sdf     Pan_mf     Sar_mf   WesEu_bf 
-#     608         53        543         99        608        101        872        222        592        757
+#     528         87        243        782        644        433        367        347        151        339
 
-# ------  1. Alps_conifer_and_mixed_forests - GENETIC ------
+# ------  1. Alps_conifer_and_mixed_forests -  ------
 
 #check
 table(Grass_sel_ecor$Alps_cmf$Period)
@@ -367,7 +366,7 @@ plot(summary(Alps_cmf_mahala1_ord1_ratio1_gr, interactions = T, un = F))
 #using caliper on all covariates
 Alps_cmf_mahala1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Alps_cmf, method = 'nearest',
                                            distance = 'mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
-                                           caliper = c(Elevation = 1.4, Roughness = 1.4))
+                                           caliper = c(Elevation = 1.3, Roughness = 1.3))
 
 summary(Alps_cmf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) # ESS < Matched (SS)
 plot(summary(Alps_cmf_mahala1_ord1_ratio1_cal1_gr, interactions = T, un = F))
@@ -448,8 +447,9 @@ plot(summary(Alps_cmf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
 #no comparison, since genetic is the only method that provided good balance and effective K:1 ratio
 Alps_gr_perf <- check_match_performance(mobj = Alps_cmf_genetic1_ratio1_cal1_gr)
 
+####FROM HERE!!!!!!!!
 
-# ------ 2. Baltic_mixed_forests - GENETIC -------
+# ------ 2. Baltic_mixed_forests -  -------
 
 #check
 table(Grass_sel_ecor$Baltic_mf$Period)
@@ -620,7 +620,7 @@ plot(summary(Baltic_mf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
 #same as for Alps_cmf
 Baltic_gr_perf <- check_match_performance(mobj = Baltic_mf_genetic1_ratio1_cal1_gr)
 
-# ------ 3. Carpathian_montane_forests - GENETIC ------
+# ------ 3. Carpathian_montane_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -753,7 +753,7 @@ Carp_gr_perf <- do.call(rbind, lapply(list(PScore = Carp_mf_pscore1_ord1_cal1_gr
 
 Carp_gr_perf #GENETIC provides a good balance and 'only' 390 observations less than the second 'best performing' method
 
-# ------ 4. Celtic_broadleaf_forests - GENETIC ------
+# ------ 4. Celtic_broadleaf_forests -  ------
 
 #check
 table(Grass_sel_ecor$Celtic_bf$Period)
@@ -924,7 +924,7 @@ Celtic_gr_perf <- check_match_performance(Celtic_bf_genetic1_ratio1_cal1_gr)
 Celtic_gr_perf
 
 
-# ------ 5. Central_European_mixed_forests - Mahalanobis ------
+# ------ 5. Central_European_mixed_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -1025,7 +1025,7 @@ CenEu_gr_perf <- do.call(rbind, lapply(list(PScore = CenEu_mf_pscore1_ord1_gr,
                                        check_match_performance))
 CenEu_gr_perf #Mahalanobis
 
-# ------ 6. European_Atlantic_mixed_forests - GENETIC ------
+# ------ 6. European_Atlantic_mixed_forests -  ------
 
 #check
 table(Grass_sel_ecor$EuAtl_mf$Period)
@@ -1205,7 +1205,7 @@ EuAtl_gr_perf <- do.call(rbind, lapply(list(PScore = EuAtl_mf_pscore1_ord1_ratio
 EuAtl_gr_perf #Genetic
 
 
-# ------ 7. Italian_sclerophyllous_and_semi_deciduous_forests - Mahalanobis ------
+# ------ 7. Italian_sclerophyllous_and_semi_deciduous_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -1307,7 +1307,7 @@ ItaScl_gr_perf <- do.call(rbind, lapply(list(PScore = ItaScl_sdf_pscore1_ord1_gr
 ItaScl_gr_perf #Mah
 
 
-# ------ 8. Pannonian_mixed_forests - GENETIC ------
+# ------ 8. Pannonian_mixed_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -1444,7 +1444,7 @@ Pan_gr_perf <- do.call(rbind, lapply(list(PScore = Pan_mf_pscore1_ord1_cal1_gr,
 
 Pan_gr_perf #Genetic, even though Genetic and PScore have very similar Avg_smd scores and PScore retains 314 observations more.
 
-# ------ 9. Sarmatic_mixed_forests - GENETIC ------
+# ------ 9. Sarmatic_mixed_forests -  ------
 
 #check
 table(Grass_sel_ecor$Sar_mf$Period)
@@ -1617,7 +1617,7 @@ Sar_gr_perf <- check_match_performance(Sar_mf_genetic1_ratio1_cal1_gr)
 Sar_gr_perf #GENETIC
 
 
-# ------ 10. Western_European_broadleaf_forests - PScore ------
+# ------ 10. Western_European_broadleaf_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
