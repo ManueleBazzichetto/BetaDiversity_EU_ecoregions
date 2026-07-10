@@ -276,7 +276,7 @@ grass_seeds <- setNames(object = grass_seeds, nm = names(Grass_sel_ecor))
 #Alps_cmf  Baltic_mf    Carp_mf  Celtic_bf   CenEu_mf   EuAtl_mf ItaScl_sdf     Pan_mf     Sar_mf   WesEu_bf 
 #     528         87        243        782        644        433        367        347        151        339
 
-# ------  1. Alps_conifer_and_mixed_forests -  ------
+# ------  1. Alps_conifer_and_mixed_forests - GENETIC ------
 
 #check
 table(Grass_sel_ecor$Alps_cmf$Period)
@@ -447,9 +447,7 @@ plot(summary(Alps_cmf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
 #no comparison, since genetic is the only method that provided good balance and effective K:1 ratio
 Alps_gr_perf <- check_match_performance(mobj = Alps_cmf_genetic1_ratio1_cal1_gr)
 
-####FROM HERE!!!!!!!!
-
-# ------ 2. Baltic_mixed_forests -  -------
+# ------ 2. Baltic_mixed_forests - GENETIC -------
 
 #check
 table(Grass_sel_ecor$Baltic_mf$Period)
@@ -504,7 +502,7 @@ plot(summary(Baltic_mf_pscore1_ord1_ratio1_gr, interactions = T, un = F))
 #using a caliper for Elevation and Roughness
 Baltic_mf_pscore1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Baltic_mf, method = 'nearest',
                                                  distance = 'glm', m.order = 'closest', ratio = 2,
-                                                 std.caliper = TRUE, caliper = c(Elevation = 1.9, Roughness = 2))
+                                                 std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
 
 summary(Baltic_mf_pscore1_ord1_ratio1_cal1_gr, un = F, interactions = T) # ESS < Matched (SS)
 plot(summary(Baltic_mf_pscore1_ord1_ratio1_cal1_gr, interactions = T, un = F))
@@ -610,7 +608,7 @@ plot(summary(Baltic_mf_genetic1_ratio1_gr, interactions = T, un = F))
 set.seed(grass_seeds[['Baltic_mf']])
 Baltic_mf_genetic1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Baltic_mf,
                                         method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis',
-                                        std.caliper = TRUE, caliper = c(Elevation = 1.7, Roughness = 2))
+                                        std.caliper = TRUE, caliper = c(Elevation = 1.8, Roughness = 2))
 
 summary(Baltic_mf_genetic1_ratio1_cal1_gr, un = F, interactions = T) #
 plot(summary(Baltic_mf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
@@ -620,7 +618,7 @@ plot(summary(Baltic_mf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
 #same as for Alps_cmf
 Baltic_gr_perf <- check_match_performance(mobj = Baltic_mf_genetic1_ratio1_cal1_gr)
 
-# ------ 3. Carpathian_montane_forests -  ------
+# ------ 3. Carpathian_montane_forests - GENETIC ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -739,7 +737,7 @@ plot(summary(Carp_mf_genetic1_gr, interactions = T, un = F))
 set.seed(grass_seeds[['Carp_mf']])
 Carp_mf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Carp_mf,
                                method = 'genetic', pop.size = 100, distance = 'mahalanobis', std.caliper = TRUE,
-                               caliper = c(Elevation = 1, Roughness = 1))
+                               caliper = c(Elevation = 0.9, Roughness = 1))
 
 summary(Carp_mf_genetic1_cal1_gr, un = F, interactions = T) #
 plot(summary(Carp_mf_genetic1_cal1_gr, interactions = T, un = F))
@@ -751,9 +749,9 @@ Carp_gr_perf <- do.call(rbind, lapply(list(PScore = Carp_mf_pscore1_ord1_cal1_gr
                            RMah = Carp_mf_rob_mahala1_ord1_cal1_gr, Genetic = Carp_mf_genetic1_cal1_gr),
                       check_match_performance))
 
-Carp_gr_perf #GENETIC provides a good balance and 'only' 390 observations less than the second 'best performing' method
+Carp_gr_perf #GENETIC provides a good balance and 'only' 444 observations less than the second 'best performing' method
 
-# ------ 4. Celtic_broadleaf_forests -  ------
+# ------ 4. Celtic_broadleaf_forests - GENETIC ------
 
 #check
 table(Grass_sel_ecor$Celtic_bf$Period)
@@ -924,7 +922,7 @@ Celtic_gr_perf <- check_match_performance(Celtic_bf_genetic1_ratio1_cal1_gr)
 Celtic_gr_perf
 
 
-# ------ 5. Central_European_mixed_forests -  ------
+# ------ 5. Central_European_mixed_forests - Mahalanobis ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -1025,7 +1023,7 @@ CenEu_gr_perf <- do.call(rbind, lapply(list(PScore = CenEu_mf_pscore1_ord1_gr,
                                        check_match_performance))
 CenEu_gr_perf #Mahalanobis
 
-# ------ 6. European_Atlantic_mixed_forests -  ------
+# ------ 6. European_Atlantic_mixed_forests - Mahalanobis ------
 
 #check
 table(Grass_sel_ecor$EuAtl_mf$Period)
@@ -1117,7 +1115,7 @@ EuAtl_mf_mahala1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Gras
                                            distance = 'mahalanobis', m.order = 'closest', ratio = 2,
                                            std.caliper = T, caliper = c(Elevation = 2, Roughness = 2))
 
-summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #ESS < Matched (SS)
+summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #
 plot(summary(EuAtl_mf_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T))
 
 
@@ -1150,10 +1148,10 @@ plot(EuAtl_mf_rob_mahala1_ord1_ratio1_gr, type = 'density', interactive = F)
 plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_gr, un = F))
 plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_gr, interactions = T, un = F))
 
-#using caliper on Elevation for var ratio
+#using caliper on Elevation and Roughness for var ratio
 EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$EuAtl_mf, method = 'nearest',
                                                distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2,
-                                               std.caliper = T, caliper = c(Elevation = 2))
+                                               std.caliper = T, caliper = c(Elevation = 2, Roughness = 2))
 
 summary(EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T) #
 plot(summary(EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr, un = F, interactions = T))
@@ -1196,14 +1194,16 @@ plot(summary(EuAtl_mf_genetic1_ratio1_cal1_gr, un = F, interactions = T))
 
 #--check matching performance
 
-#compare all methods, except Mahalanobis for which ESS < Matched (SS)
+#compare all methods
 EuAtl_gr_perf <- do.call(rbind, lapply(list(PScore = EuAtl_mf_pscore1_ord1_ratio1_cal1_gr,
+                                            Mah = EuAtl_mf_mahala1_ord1_ratio1_cal1_gr,
                                             RMah = EuAtl_mf_rob_mahala1_ord1_ratio1_cal1_gr,
                                             Genetic = EuAtl_mf_genetic1_ratio1_cal1_gr),
                                        check_match_performance))
 
-EuAtl_gr_perf #Genetic
+EuAtl_gr_perf #Mahalanobis
 
+####FROM HERE!!!!!!!!!
 
 # ------ 7. Italian_sclerophyllous_and_semi_deciduous_forests -  ------
 
