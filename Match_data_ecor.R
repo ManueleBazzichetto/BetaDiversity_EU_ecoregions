@@ -1203,9 +1203,7 @@ EuAtl_gr_perf <- do.call(rbind, lapply(list(PScore = EuAtl_mf_pscore1_ord1_ratio
 
 EuAtl_gr_perf #Mahalanobis
 
-####FROM HERE!!!!!!!!!
-
-# ------ 7. Italian_sclerophyllous_and_semi_deciduous_forests -  ------
+# ------ 7. Italian_sclerophyllous_and_semi_deciduous_forests - Mahalanobis ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -1298,13 +1296,14 @@ plot(summary(ItaScl_sdf_genetic1_gr, interactions = T, un = F))
 
 #--check matching performance
 
-#comparison is between Prop score, Mahalanobis and Robust Mahalanobis
+#compare all methods
 ItaScl_gr_perf <- do.call(rbind, lapply(list(PScore = ItaScl_sdf_pscore1_ord1_gr,
                                              Mah = ItaScl_sdf_mahala1_ord1_gr,
-                                             RMah = ItaScl_sdf_rob_mahala1_ord1_gr),
+                                             RMah = ItaScl_sdf_rob_mahala1_ord1_gr,
+                                             Genetic = ItaScl_sdf_genetic1_gr),
                                         check_match_performance))
 
-ItaScl_gr_perf #Mah
+ItaScl_gr_perf #Mahalanobis
 
 
 # ------ 8. Pannonian_mixed_forests -  ------
@@ -1424,11 +1423,16 @@ plot(Pan_mf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(Pan_mf_genetic1_gr, un = F))
 plot(summary(Pan_mf_genetic1_gr, interactions = T, un = F))
 
+####FROM HERE!!!!!!!
+#continua con procedura sotto - ultimo run effettuato con caliper per Elevation 1.3 e Roughness 1.4
+#caliper per Elevation andrà ridotto di 0.1 (a 1.2)
+#per i metodi prima, è stato già identificato il caliper che permette matching adeguato
+
 #using a caliper for Elevation and Roughness
 set.seed(grass_seeds[['Pan_mf']])
 Pan_mf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf,
                               method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                              std.caliper = TRUE, caliper = c(Elevation = 1.2, Roughness = 1.4))
+                              std.caliper = TRUE, caliper = c(Elevation = 1.3, Roughness = 1.4))
 
 summary(Pan_mf_genetic1_cal1_gr, un = F, interactions = T) #
 plot(summary(Pan_mf_genetic1_cal1_gr, interactions = T, un = F))
