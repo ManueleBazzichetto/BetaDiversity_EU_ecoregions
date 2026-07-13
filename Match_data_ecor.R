@@ -1306,7 +1306,7 @@ ItaScl_gr_perf <- do.call(rbind, lapply(list(PScore = ItaScl_sdf_pscore1_ord1_gr
 ItaScl_gr_perf #Mahalanobis
 
 
-# ------ 8. Pannonian_mixed_forests -  ------
+# ------ 8. Pannonian_mixed_forests - Rob. Mahalanobis ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -1423,16 +1423,12 @@ plot(Pan_mf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(Pan_mf_genetic1_gr, un = F))
 plot(summary(Pan_mf_genetic1_gr, interactions = T, un = F))
 
-####FROM HERE!!!!!!!
-#continua con procedura sotto - ultimo run effettuato con caliper per Elevation 1.3 e Roughness 1.4
-#caliper per Elevation andrà ridotto di 0.1 (a 1.2)
-#per i metodi prima, è stato già identificato il caliper che permette matching adeguato
 
 #using a caliper for Elevation and Roughness
 set.seed(grass_seeds[['Pan_mf']])
 Pan_mf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Pan_mf,
                               method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                              std.caliper = TRUE, caliper = c(Elevation = 1.3, Roughness = 1.4))
+                              std.caliper = TRUE, caliper = c(Elevation = 1.2, Roughness = 1.4))
 
 summary(Pan_mf_genetic1_cal1_gr, un = F, interactions = T) #
 plot(summary(Pan_mf_genetic1_cal1_gr, interactions = T, un = F))
@@ -1446,9 +1442,9 @@ Pan_gr_perf <- do.call(rbind, lapply(list(PScore = Pan_mf_pscore1_ord1_cal1_gr,
                                           Genetic = Pan_mf_genetic1_cal1_gr),
                                      check_match_performance))
 
-Pan_gr_perf #Genetic, even though Genetic and PScore have very similar Avg_smd scores and PScore retains 314 observations more.
+Pan_gr_perf #RMah has slightly better performance than Genetic and allows retaining more observations
 
-# ------ 9. Sarmatic_mixed_forests -  ------
+# ------ 9. Sarmatic_mixed_forests - GENETIC ------
 
 #check
 table(Grass_sel_ecor$Sar_mf$Period)
@@ -1608,7 +1604,7 @@ plot(summary(Sar_mf_genetic1_ratio1_gr, interactions = T, un = F))
 set.seed(grass_seeds[['Sar_mf']])
 Sar_mf_genetic1_ratio1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$Sar_mf,
                                      method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis',
-                                     std.caliper = TRUE, caliper = c(Elevation = 1.6, Roughness = 1.4))
+                                     std.caliper = TRUE, caliper = c(Elevation = 1.6, Roughness = 1.5))
 
 summary(Sar_mf_genetic1_ratio1_cal1_gr, un = F, interactions = T)
 plot(summary(Sar_mf_genetic1_ratio1_cal1_gr, interactions = T, un = F))
@@ -1693,7 +1689,7 @@ plot(summary(WesEu_bf_mahala1_ord1_gr, interactions = T, un = F))
 #using caliper on Elevation (for SMD) and on Roughness (for var ratio)
 WesEu_bf_mahala1_ord1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$WesEu_bf, method = 'nearest',
                                     distance = 'mahalanobis', m.order = 'closest',
-                                    std.caliper = TRUE, caliper = c(Elevation = 1.9, Roughness = 2))
+                                    std.caliper = TRUE, caliper = c(Elevation = 1.7, Roughness = 2))
 
 summary(WesEu_bf_mahala1_ord1_cal1_gr, un = F, interactions = T) #
 plot(summary(WesEu_bf_mahala1_ord1_cal1_gr, interactions = T, un = F))
@@ -1721,7 +1717,7 @@ plot(summary(WesEu_bf_rob_mahala1_ord1_gr, interactions = T, un = F))
 #using caliper on Elevation (for SMD) and on Roughness (for var ratio)
 WesEu_bf_rob_mahala1_ord1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$WesEu_bf, method = 'nearest',
                                         distance = 'robust_mahalanobis', m.order = 'closest',
-                                        std.caliper = TRUE, caliper = c(Elevation = 1.8, Roughness = 2))
+                                        std.caliper = TRUE, caliper = c(Elevation = 1.6, Roughness = 2))
 
 summary(WesEu_bf_rob_mahala1_ord1_cal1_gr, un = F, interactions = T) #
 plot(summary(WesEu_bf_rob_mahala1_ord1_cal1_gr, interactions = T, un = F))
@@ -1739,11 +1735,14 @@ plot(WesEu_bf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(WesEu_bf_genetic1_gr, un = F))
 plot(summary(WesEu_bf_genetic1_gr, interactions = T, un = F))
 
+####FROM HERE!!!!!
+##Last run with Elevation = 2 and Roughness = 1.8, so launch Elevation = 2 (same) and Roughness = 1.7 (0.1 lower)
+
 #using caliper on Elevation (for SMD) and Roughness (for Var Ratio and SMD after some adjustments of the caliper)
 set.seed(grass_seeds[['WesEu_bf']])
 WesEu_bf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$WesEu_bf,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 0.8))
+                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 1.8))
 
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
