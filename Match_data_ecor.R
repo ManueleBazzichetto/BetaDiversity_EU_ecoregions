@@ -1736,13 +1736,13 @@ plot(summary(WesEu_bf_genetic1_gr, un = F))
 plot(summary(WesEu_bf_genetic1_gr, interactions = T, un = F))
 
 ####FROM HERE!!!!!
-##Last run with Elevation = 2 and Roughness = 1.8, so launch Elevation = 2 (same) and Roughness = 1.7 (0.1 lower)
+##Last run with Elevation = 2 and Roughness = 1.1, so launch Elevation = 2 (same) and Roughness = 1 (0.1 lower)
 
 #using caliper on Elevation (for SMD) and Roughness (for Var Ratio and SMD after some adjustments of the caliper)
 set.seed(grass_seeds[['WesEu_bf']])
 WesEu_bf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$WesEu_bf,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 1.8))
+                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 1.1))
 
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
