@@ -1844,7 +1844,7 @@ sapply(Forest_meta[env_var_nm], function(cl) sum(is.na(cl)))
 
 forest_loc_to_drop <- complete.cases(Forest_meta[env_var_nm])
 
-sum(!forest_loc_to_drop) #1283 (out of 110,732)
+sum(!forest_loc_to_drop) #1,244 (out of 109,827)
 
 Forest_meta <- Forest_meta[forest_loc_to_drop, ]
 
@@ -1857,7 +1857,7 @@ sum(is.na(Forest_meta$Period)) #0
 
 #check plot size
 sum(is.na(Forest_meta$Releve_area_m2)) #0
-range(Forest_meta$Releve_area_m2) #50 9999
+range(Forest_meta$Releve_area_m2) #50 1000
 sort(table(Forest_meta$Releve_area_m2))
 
 #check abundance of observations for the different ecoregions
@@ -1865,7 +1865,7 @@ table(Forest_meta$ECO_NAME)
 table(Forest_meta$ECO_NAME, Forest_meta$Period) #only Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests has less than 1k obs (prd2)
 
 #drop observations for Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests
-Forest_meta <- Forest_meta[Forest_meta$ECO_NAME != 'Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests', ] #107,084
+Forest_meta <- Forest_meta[Forest_meta$ECO_NAME != 'Aegean_and_Western_Turkey_sclerophyllous_and_mixed_forests', ] #106,229
 
 #check differences in ecoregions between forests and grasslands
 setdiff(unique(Forest_meta$ECO_NAME), unique(Grass_meta$ECO_NAME)) #Dinaric_Mountains_mixed_forests, Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests, Rodope_montane_mixed_forests
@@ -1942,6 +1942,9 @@ set.seed(5768)
 forest_seeds <- round(runif(n = length(For_sel_ecor), min = 1, max = 1000), digits = 0)
 
 forest_seeds <- setNames(object = forest_seeds, nm = names(For_sel_ecor))
+
+#Alps_cmf    Carp_mf   CenEu_mf  DinMon_mf   EuAtl_mf ItaScl_sdf     Pan_mf  RodMon_mf     Sar_mf TyrAdr_smf   WesEu_bf 
+#     726        823        785        233        174         33        413        567         63        194        249
 
 # ------  1. Alps_conifer_and_mixed_forests - Mahalanobis ------
 
@@ -2154,7 +2157,7 @@ Carp_for_perf <- do.call(rbind, lapply(list(PScore = Carp_mf_pscore1_ord1_for,
 Carp_for_perf #Mahalanobis
 
 
-# ------ 3. Central_European_mixed_forests - PScore ------
+# ------ 3. Central_European_mixed_forests - PSCORE ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -2272,7 +2275,7 @@ plot(summary(CenEu_mf_genetic1_for, interactions = T, un = F))
 set.seed(forest_seeds[['CenEu_mf']])
 CenEu_mf_genetic1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$CenEu_mf,
                                     method = 'genetic', pop.size = 100, distance = 'mahalanobis', std.caliper = TRUE,
-                                    caliper = c(Elevation = 1.8, Roughness = 2))
+                                    caliper = c(Elevation = 1.5, Roughness = 1.8))
 
 summary(CenEu_mf_genetic1_cal1_for, un = F, interactions = T) #
 plot(summary(CenEu_mf_genetic1_cal1_for, interactions = T, un = F))
@@ -2286,9 +2289,9 @@ CenEu_for_perf <- do.call(rbind, lapply(list(PScore = CenEu_mf_pscore1_ord1_cal1
                                             RMah = CenEu_mf_rob_mahala1_ord1_cal1_for,
                                             Genetic = CenEu_mf_genetic1_cal1_for), check_match_performance))
 
-CenEu_for_perf #Prop score
+CenEu_for_perf #Prop score has the best performance (although it has lowest sample size)
 
-# ------ 4. Dinaric_Mountains_mixed_forests - PScore ------
+# ------ 4. Dinaric_Mountains_mixed_forests - PSCORE ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -2431,7 +2434,7 @@ plot(summary(EuAtl_mf_pscore1_ord1_ratio1_for, interactions = T, un = F))
 #caliper on all covariates and prop score (for both SMD and Var Ratio)
 EuAtl_mf_pscore1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$EuAtl_mf, method = 'nearest',
                                                  distance = 'glm', m.order = 'closest', ratio = 2, std.caliper = TRUE,
-                                                 link = 'linear.logit', caliper = c(2, Elevation = 2, Roughness = 2))
+                                                 link = 'linear.logit', caliper = c(2, Elevation = 2, Roughness = 1.9))
 
 summary(EuAtl_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T) # Matched ESS < Matched
 plot(summary(EuAtl_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T))
@@ -2666,6 +2669,13 @@ ItaScl_for_perf #Genetic
 
 # ------ 7. Pannonian_mixed_forests - GENETIC ------
 
+####FROM HERE!!!!!!
+#il matching è stato già completato per Pan_mf_for, ma con il dataset precedente era necessario settare ratio = 2
+#mentre in questo caso non è più necessario - controllare che i codici per settare solo m.order siano corretti
+#e in caso eliminare vecchi codici con ratio = 2 (ora commentati)
+
+#balanced sample size between periods - don't test ratio = 2
+
 table(For_sel_ecor$Pan_mf$Period)
 table(For_sel_ecor$Pan_mf$Period_bin)
 
@@ -2692,23 +2702,23 @@ plot(summary(Pan_mf_pscore1_for))
 plot(summary(Pan_mf_pscore1_for, interactions = T))
 plot(summary(Pan_mf_pscore1_for, interactions = T, un = F))
 
-#order + ratio
-Pan_mf_pscore1_ord1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
-                                       distance = 'glm', m.order = 'closest', ratio = 2)
+#order
+Pan_mf_pscore1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+                                       distance = 'glm', m.order = 'closest')
 
-summary(Pan_mf_pscore1_ord1_ratio1_for, un = F, interactions = T)
-plot(Pan_mf_pscore1_ord1_ratio1_for, type = 'jitter', interactive = F)
-plot(Pan_mf_pscore1_ord1_ratio1_for, type = 'density', interactive = F)
-plot(summary(Pan_mf_pscore1_ord1_ratio1_for, un = F))
-plot(summary(Pan_mf_pscore1_ord1_ratio1_for, interactions = T, un = F))
+summary(Pan_mf_pscore1_ord1_for, un = F, interactions = T)
+plot(Pan_mf_pscore1_ord1_for, type = 'jitter', interactive = F)
+plot(Pan_mf_pscore1_ord1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_pscore1_ord1_for, un = F))
+plot(summary(Pan_mf_pscore1_ord1_for, interactions = T, un = F))
 
 #caliper on all variables and distance
-Pan_mf_pscore1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
-                                               distance = 'glm', m.order = 'closest', ratio = 2, std.caliper = TRUE,
-                                               link = 'linear.logit', caliper = c(2, Elevation = 2, Roughness = 2))
+#Pan_mf_pscore1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+#                                               distance = 'glm', m.order = 'closest', ratio = 2, std.caliper = TRUE,
+#                                               link = 'linear.logit', caliper = c(2, Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
-plot(summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T))
+#summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
+#plot(summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T))
 
 
 #--Mahalanobis
@@ -2716,53 +2726,54 @@ plot(summary(Pan_mf_pscore1_ord1_ratio1_cal1_for, un = F, interactions = T))
 Pan_mf_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest', distance = 'mahalanobis')
 
 summary(Pan_mf_mahala1_for)
+summary(Pan_mf_mahala1_for, interactions = T, un = F)
 plot(Pan_mf_mahala1_for, type = 'density', interactive = F)
 plot(summary(Pan_mf_mahala1_for, un = F))
 plot(summary(Pan_mf_mahala1_for, interactions = T, un = F))
 
-#order + ratio
-Pan_mf_mahala1_ord1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
-                                       distance = 'mahalanobis', m.order = 'closest', ratio = 2)
+#order
+Pan_mf_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+                                       distance = 'mahalanobis', m.order = 'closest')
 
-summary(Pan_mf_mahala1_ord1_ratio1_for, un = F, interactions = T)
-plot(Pan_mf_mahala1_ord1_ratio1_for, type = 'density', interactive = F)
-plot(summary(Pan_mf_mahala1_ord1_ratio1_for, un = F))
-plot(summary(Pan_mf_mahala1_ord1_ratio1_for, interactions = T, un = F))
+summary(Pan_mf_mahala1_ord1_for, un = F, interactions = T)
+plot(Pan_mf_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_mahala1_ord1_for, un = F))
+plot(summary(Pan_mf_mahala1_ord1_for, interactions = T, un = F))
 
 #caliper on all variables
-Pan_mf_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
-                                          distance = 'mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
-                                          caliper = c(Elevation = 2, Roughness = 2))
+#Pan_mf_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+#                                          distance = 'mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
+#                                          caliper = c(Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
-plot(summary(Pan_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
+#summary(Pan_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
+#plot(summary(Pan_mf_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
 
 #--robust Mahalanobis
 
 Pan_mf_rob_mahala1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
                                       method = 'nearest', distance = 'robust_mahalanobis')
 
-summary(Pan_mf_rob_mahala1_for)
+summary(Pan_mf_rob_mahala1_for, interactions = T, un = F)
 plot(Pan_mf_rob_mahala1_for, type = 'density', interactive = F)
 plot(summary(Pan_mf_rob_mahala1_for, un = F))
 plot(summary(Pan_mf_rob_mahala1_for, interactions = T, un = F))
 
-#order + ratio
-Pan_mf_rob_mahala1_ord1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
-                                           distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2)
+#order
+Pan_mf_rob_mahala1_ord1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+                                           distance = 'robust_mahalanobis', m.order = 'closest')
 
-summary(Pan_mf_rob_mahala1_ord1_ratio1_for, un = F, interactions = T)
-plot(Pan_mf_rob_mahala1_ord1_ratio1_for, type = 'density', interactive = F)
-plot(summary(Pan_mf_rob_mahala1_ord1_ratio1_for, un = F))
-plot(summary(Pan_mf_rob_mahala1_ord1_ratio1_for, interactions = T, un = F))
+summary(Pan_mf_rob_mahala1_ord1_for, un = F, interactions = T)
+plot(Pan_mf_rob_mahala1_ord1_for, type = 'density', interactive = F)
+plot(summary(Pan_mf_rob_mahala1_ord1_for, un = F))
+plot(summary(Pan_mf_rob_mahala1_ord1_for, interactions = T, un = F))
 
 #caliper on all variables and distance
-Pan_mf_rob_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
-                                              distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
-                                              caliper = c(Elevation = 2, Roughness = 2))
+#Pan_mf_rob_mahala1_ord1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf, method = 'nearest',
+#                                              distance = 'robust_mahalanobis', m.order = 'closest', ratio = 2, std.caliper = TRUE,
+#                                              caliper = c(Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
-plot(summary(Pan_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
+#summary(Pan_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T) # ESS < SS
+#plot(summary(Pan_mf_rob_mahala1_ord1_ratio1_cal1_for, un = F, interactions = T))
 
 
 #------genetic matching
@@ -2772,35 +2783,38 @@ set.seed(forest_seeds[['Pan_mf']])
 Pan_mf_genetic1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
                                    method = 'genetic', pop.size = 100, distance = 'mahalanobis')
 
-summary(Pan_mf_genetic1_for)
+summary(Pan_mf_genetic1_for, un = F, interactions = T)
 plot(Pan_mf_genetic1_for, type = 'density', interactive = F)
 plot(summary(Pan_mf_genetic1_for, un = F))
 plot(summary(Pan_mf_genetic1_for, interactions = T, un = F))
 
 #ratio
-set.seed(forest_seeds[['Pan_mf']])
-Pan_mf_genetic1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
-                                      method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis')
+#set.seed(forest_seeds[['Pan_mf']])
+#Pan_mf_genetic1_ratio1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
+#                                      method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis')
 
-summary(Pan_mf_genetic1_ratio1_for, un = F, interactions = T)
-plot(Pan_mf_genetic1_ratio1_for, type = 'density', interactive = F)
-plot(summary(Pan_mf_genetic1_ratio1_for, un = F))
-plot(summary(Pan_mf_genetic1_ratio1_for, interactions = T, un = F))
+#summary(Pan_mf_genetic1_ratio1_for, un = F, interactions = T)
+#plot(Pan_mf_genetic1_ratio1_for, type = 'density', interactive = F)
+#plot(summary(Pan_mf_genetic1_ratio1_for, un = F))
+#plot(summary(Pan_mf_genetic1_ratio1_for, interactions = T, un = F))
 
 #caliper on all variables
-set.seed(forest_seeds[['Pan_mf']])
-Pan_mf_genetic1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
-                                      method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis',
-                                      std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
+#set.seed(forest_seeds[['Pan_mf']])
+#Pan_mf_genetic1_ratio1_cal1_for <- matchit(formula_for_matchit, data = For_sel_ecor$Pan_mf,
+#                                      method = 'genetic', ratio = 2, pop.size = 100, distance = 'mahalanobis',
+#                                      std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 2))
 
-summary(Pan_mf_genetic1_ratio1_cal1_for, un = F, interactions = T)
-plot(summary(Pan_mf_genetic1_ratio1_cal1_for, un = F, interactions = T))
+#summary(Pan_mf_genetic1_ratio1_cal1_for, un = F, interactions = T)
+#plot(summary(Pan_mf_genetic1_ratio1_cal1_for, un = F, interactions = T))
 
 
 #--check matching performance
 
-#only genetic allows 2:1 matching and good balance
-Pan_for_perf <- check_match_performance(Pan_mf_genetic1_ratio1_cal1_for)
+#compare all methods
+Pan_for_perf <- do.call(rbind, lapply(list(PScore = Pan_mf_pscore1_ord1_for,
+                                           Mah = Pan_mf_mahala1_ord1_for,
+                                           RMah = Pan_mf_rob_mahala1_ord1_for,
+                                           Genetic = Pan_mf_genetic1_for), check_match_performance))
 
 Pan_for_perf #Genetic
 
@@ -2913,7 +2927,7 @@ plot(summary(RodMon_mf_genetic1_cal1_for, un = F, interactions = T))
 
 #NO METHOD ALLOWS HAVING AT LEAST 1K OBSERVATIONS PER PERIOD
 
-# ------ 9. Sarmatic_mixed_forests - Mahalanobis ------
+# ------ 9. Sarmatic_mixed_forests -  ------
 
 table(For_sel_ecor$Sar_mf$Period)
 table(For_sel_ecor$Sar_mf$Period_bin)
@@ -3030,7 +3044,7 @@ Sar_for_perf <- do.call(rbind, lapply(list(PScore = Sar_mf_pscore1_ord1_ratio1_c
 Sar_for_perf #Mahalanobis (notice that all methods provide the same sample size)
 
 
-# ------ 10. Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests - PScore ------
+# ------ 10. Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -3162,7 +3176,7 @@ TyrAdr_for_perf <- do.call(rbind, lapply(list(PScore = TyrAdr_smf_pscore1_ord1_c
 
 TyrAdr_for_perf #Propensity score
 
-# ------ 11. Western_European_broadleaf_forests - GENETIC ------
+# ------ 11. Western_European_broadleaf_forests -  ------
 
 #balanced sample size between periods - don't test ratio = 2
 
