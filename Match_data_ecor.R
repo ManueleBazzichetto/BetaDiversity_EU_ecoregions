@@ -1617,7 +1617,7 @@ Sar_gr_perf <- check_match_performance(Sar_mf_genetic1_ratio1_cal1_gr)
 Sar_gr_perf #GENETIC
 
 
-# ------ 10. Western_European_broadleaf_forests -  ------
+# ------ 10. Western_European_broadleaf_forests - Mahalanobis ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -1735,14 +1735,11 @@ plot(WesEu_bf_genetic1_gr, type = 'density', interactive = F)
 plot(summary(WesEu_bf_genetic1_gr, un = F))
 plot(summary(WesEu_bf_genetic1_gr, interactions = T, un = F))
 
-####FROM HERE!!!!!
-##Last run with Elevation = 2 and Roughness = 1.1, so launch Elevation = 2 (same) and Roughness = 1 (0.1 lower)
-
 #using caliper on Elevation (for SMD) and Roughness (for Var Ratio and SMD after some adjustments of the caliper)
 set.seed(grass_seeds[['WesEu_bf']])
 WesEu_bf_genetic1_cal1_gr <- matchit(formula_for_matchit, data = Grass_sel_ecor$WesEu_bf,
                                 method = 'genetic', pop.size = 100, distance = 'mahalanobis',
-                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 1.1))
+                                std.caliper = TRUE, caliper = c(Elevation = 2, Roughness = 0.8))
 
 summary(WesEu_bf_genetic1_cal1_gr, un = F, interactions = T)
 plot(summary(WesEu_bf_genetic1_cal1_gr, un = F))
@@ -1756,7 +1753,7 @@ Wes_gr_perf <- do.call(rbind, lapply(list(PScore = WesEu_bf_pscore1_ord1_cal1_gr
                                           RMah = WesEu_bf_rob_mahala1_ord1_cal1_gr,
                                           Genetic = WesEu_bf_genetic1_cal1_gr), check_match_performance))
 
-Wes_gr_perf #Prop score performs best in terms of Avg_smd and loses 572 obs more than Mah (largest sample size)
+Wes_gr_perf #Mah and Prop score performs similarly, but Mah has larger sample size
 
 
 
@@ -1773,27 +1770,27 @@ Wes_gr_perf #Prop score performs best in terms of Avg_smd and loses 572 obs more
 #Carpathian_montane_forests: Carp_mf_genetic1_cal1_gr
 #Celtic_broadleaf_forests: Celtic_bf_genetic1_ratio1_cal1_gr
 #Central_European_mixed_forests: CenEu_mf_mahala1_ord1_gr
-#European_Atlantic_mixed_forests: EuAtl_mf_genetic1_ratio1_cal1_gr
+#European_Atlantic_mixed_forests: EuAtl_mf_mahala1_ord1_ratio1_cal1_gr
 #Italian_sclerophyllous_and_semi_deciduous_forests: ItaScl_sdf_mahala1_ord1_gr
-#Pannonian_mixed_forests: Pan_mf_genetic1_cal1_gr
+#Pannonian_mixed_forests: Pan_mf_rob_mahala1_ord1_cal1_gr
 #Sarmatic_mixed_forests: Sar_mf_genetic1_ratio1_cal1_gr
-#Western_European_broadleaf_forests: WesEu_bf_pscore1_ord1_cal1_gr
+#Western_European_broadleaf_forests: WesEu_bf_mahala1_ord1_cal1_gr
 
 Matched_datasets_grass <- list(Alps_cmf = Alps_cmf_genetic1_ratio1_cal1_gr,
                                Baltic_mf = Baltic_mf_genetic1_ratio1_cal1_gr,
                                Carp_mf = Carp_mf_genetic1_cal1_gr,
                                Celtic_bf = Celtic_bf_genetic1_ratio1_cal1_gr,
                                CenEu_mf = CenEu_mf_mahala1_ord1_gr,
-                               EuAtl_mf = EuAtl_mf_genetic1_ratio1_cal1_gr,
+                               EuAtl_mf = EuAtl_mf_mahala1_ord1_ratio1_cal1_gr,
                                ItaScl_sdf = ItaScl_sdf_mahala1_ord1_gr,
-                               Pan_mf = Pan_mf_genetic1_cal1_gr,
+                               Pan_mf = Pan_mf_rob_mahala1_ord1_cal1_gr,
                                Sar_mf = Sar_mf_genetic1_ratio1_cal1_gr,
-                               WesEu_bf = WesEu_bf_pscore1_ord1_cal1_gr)
+                               WesEu_bf = WesEu_bf_mahala1_ord1_cal1_gr)
 
 
 Matched_datasets_grass <- lapply(Matched_datasets_grass, function(mobj) {
   
-  #extract matched data - drop 'matchdata' class because this obj type is not accepted by gdm package
+  #extract matched data - drop 'matchdata' class because this obj type is not compatible with gdm package
   dtf <- as.data.frame(MatchIt::match_data(mobj))
   
   #check weights are all 1
