@@ -2996,7 +2996,7 @@ Sar_for_perf <- do.call(rbind, lapply(list(PScore = Sar_mf_pscore1_ord1_ratio1_c
 Sar_for_perf #Mahalanobis (notice that all methods provide the same sample size)
 
 
-# ------ 10. Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests - PScore ------
+# ------ 10. Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests - PSCORE ------
 
 #balanced sample size between periods - don't test ratio = 2
 
@@ -3235,18 +3235,16 @@ WesEu_for_perf #Mah, which anyway has nearly the same performance as Genetic in 
 
 #----extract matched datasets and prepare them for GDMs
 
-####FROM HERE!!!!!
-
 #Alps_conifer_and_mixed_forests: Alps_cmf_mahala1_ord1_ratio1_for
 #Carpathian_montane_forests: Carp_mf_mahala1_ord1_for
 #Central_European_mixed_forests: CenEu_mf_pscore1_ord1_cal1_for
 #Dinaric_Mountains_mixed_forests: DinMon_mf_pscore1_ord1_for
 #European_Atlantic_mixed_forests: EuAtl_mf_genetic1_ratio1_cal1_for
 #Italian_sclerophyllous_and_semi_deciduous_forests: ItaScl_sdf_genetic1_cal1_for
-#Pannonian_mixed_forests: Pan_mf_genetic1_ratio1_cal1_for
+#Pannonian_mixed_forests: Pan_mf_genetic1_for
 #Sarmatic_mixed_forests: Sar_mf_mahala1_ord1_ratio1_cal1_for
 #Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests: TyrAdr_smf_pscore1_ord1_cal1_for
-#Western_European_broadleaf_forests: WesEu_bf_genetic1_for
+#Western_European_broadleaf_forests: WesEu_bf_mahala1_ord1_for
 
 
 Matched_datasets_forest <- list(Alps_cmf = Alps_cmf_mahala1_ord1_ratio1_for,
@@ -3255,10 +3253,10 @@ Matched_datasets_forest <- list(Alps_cmf = Alps_cmf_mahala1_ord1_ratio1_for,
                                 DinMon_mf = DinMon_mf_pscore1_ord1_for,
                                 EuAtl_mf = EuAtl_mf_genetic1_ratio1_cal1_for,
                                 ItaScl_sdf = ItaScl_sdf_genetic1_cal1_for,
-                                Pan_mf = Pan_mf_genetic1_ratio1_cal1_for,
+                                Pan_mf = Pan_mf_genetic1_for,
                                 Sar_mf = Sar_mf_mahala1_ord1_ratio1_cal1_for,
                                 TyrAdr_smf = TyrAdr_smf_pscore1_ord1_cal1_for,
-                                WesEu_bf = WesEu_bf_genetic1_for)
+                                WesEu_bf = WesEu_bf_mahala1_ord1_for)
 
 
 Matched_datasets_forest <- lapply(Matched_datasets_forest, function(mobj) {
@@ -3592,8 +3590,8 @@ map_of_sel_ecor <- ggplot() +
   theme(legend.position = 'top', legend.text = element_text(size = 12), legend.title = element_text(size = 14))
 
 #saving the image to the IAVS2026 folder for the moment
-ggsave(plot = map_of_sel_ecor, filename = 'C:/MOTIVATE/Talks_and_presentations/IAVS_2026/Map_of_ecoregions.jpeg', device = 'jpeg',
-       width = 28, height = 26, units = 'cm', dpi = 300)
+#ggsave(plot = map_of_sel_ecor, filename = 'C:/MOTIVATE/Talks_and_presentations/IAVS_2026/Map_of_ecoregions.jpeg', device = 'jpeg',
+#       width = 28, height = 26, units = 'cm', dpi = 300)
 
 #-------------------------------------------------rank ecoregions by altitude, longitude and latitude
 
