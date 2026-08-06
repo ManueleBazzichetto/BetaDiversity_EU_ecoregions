@@ -50,7 +50,7 @@ identical(combo_of_plotIDs(EVA_duply$Alps_cmf$Period1[7]),
 rm(ex_to_del, ex_to_del_mat, ex_to_del_mat_vec)
 
 
-#-- function to add small noise to coordinates of spatial duplicates
+#-- function for adding small noise to coordinates of spatial duplicates
 
 #!remember to set.seed for reproducibility
 

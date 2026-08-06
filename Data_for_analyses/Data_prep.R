@@ -1,6 +1,7 @@
+#This script includes code to process matched datasets, that is datasets including matched samples between periods, and obtain
+#the input data for running gdms and other analyses (e.g., distance-decay model for beta diversity between periods)
 
-#TO BE UPDATED!
-library(gdm)
+library(gdm) #updated to version 1.6.0-7 on August 6th 2026
 
 library(mapview)
 library(sf)
@@ -11,19 +12,23 @@ library(vegan)
 library(data.table)
 library(car) #for VIF
 
+#NOTES:
 
-#it is not possible to run GDMs for all ecoregions simultaneously, as objects will completely fill the memory
+#it is not possible to run GDMs for all ecoregions simultaneously, as objects would overwhelm the memory
 
-#the comparisons (dissimilarities) between sites having the same coordinates should be dropped out from
+#the comparisons (dissimilarities) between sites having the same coordinates (spatial duplicates) should be dropped out from
 #the table formatted as input data for GDMs (sitePairTable)
-#to this aim, I'm using the EVA_duply list to create all pairs between PlotID of duplicates
-#and I'm dropping these pairs out from the table that will be used as input data for GDMs
+#to this aim, I'm using the EVA_duply list to create all possible pairs between PlotIDs of duplicates,
+#and I'm excluding these pairs from the table that will be used as input data for GDMs
 
-#at the same time, the table used as input for the GDMs should not include plots with the same coordinates
-#for this reason, I am adding a small noise to the coordinates of spatial duplicates
-#this create fake coordinates, that are not used for any practical reason, except for computing the geographic distance
-#between a plots (the noise enters into play when at least one of the plot pairs is a spatial duplicate)
-#the amount of noise is very small, to not significantly affect the computation of geographic distance between plots
+#the step described above removes dissimilarities among spatial duplicates.
+#However, dissimilarities among non-duplicates are kept, meaning that plots with identical coordinates will
+#be included in the sitePairTable.
+#This is a problem, because the table used as input for the GDMs should not include plots with identical coordinates.
+#For this reason, I am adding a small amount of noise to the coordinates of spatial duplicates.
+#This create fake coordinates, that are not used for any practical reason, except for computing the geographic distance
+#between plots (the noise involves pairs where at least one of the plots is a spatial duplicate).
+#The amount of noise is very small, though, meaning that it does not significantly alter the computed geographic distance between plots
 
 #in case geo = TRUE in the gdms, check effect of distance on intercept - if duplicate pairs are excluded (see below)
 #the effect should be reduced
@@ -50,6 +55,8 @@ load(file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Selected_ecor_names.RData'
 do.call(rbind, lapply(EVA_duply, function(i) sapply(i, length)))
 
 
+##TO BE UPDATED IF I ADD OTHER STEPS, E.G. COMPUTATION OF OTHER BETA DIVE INDICES FOR DISTANCE-DECAY MODELS
+
 #1) prepare data for gdm::formatsitepair()
 
 #2) data prepared for gdm::formatsitepair() should be saved separately so that they can be used in a for loop
@@ -67,9 +74,14 @@ sum(duplicated(unname(unlist(lapply(Matched_datasets_forest, function(eco) unlis
 unique(do.call(rbind, lapply(Matched_datasets_grass, function(eco) do.call(rbind, eco)))[['EunisVerbose_lev1']]) #grasslands
 unique(do.call(rbind, lapply(Matched_datasets_forest, function(eco) do.call(rbind, eco)))[['EunisVerbose_lev1']]) #forests
 
+#check that there are no NAs left
+all(sapply(Matched_datasets_grass, function(eco) all(!sapply(eco, anyNA))))
+all(sapply(Matched_datasets_forest, function(eco) all(!sapply(eco, anyNA))))
+
 #subset EVA_duply to keep only duplicates of selected ecoregions
 
 all(names(sel_ecor_names) %in% unique(c(names(Matched_datasets_grass), names(Matched_datasets_forest)))) #TRUE
+setdiff(names(sel_ecor_names), union(names(Matched_datasets_grass), names(Matched_datasets_forest))) #empty chr
 
 all(sel_ecor_names %in% names(EVA_duply)) #TRUE
 
@@ -100,11 +112,6 @@ unique(unlist(lapply(EVA_duply, names))) #"Period1" "Period2"
 identical(names(EVA_duply), unname(sel_ecor_names))
 
 names(EVA_duply) <- names(sel_ecor_names)
-
-#!!REMOVE IF NOT NEEDED!!
-#divide ecoregion names for grasslands and forests
-#grass_sel_econm <- sel_ecor_names[names(sel_ecor_names) %in% names(Matched_datasets_grass)]
-#for_sel_econm <- sel_ecor_names[names(sel_ecor_names) %in% names(Matched_datasets_forest)]
 
 #--lists of PlotIDs of spatial duplicates
 
@@ -156,6 +163,9 @@ EVA_duply_unique <- lapply(EVA_duply, function(eco) {
 #--subset EVA_veg to keep only PlotIDs in Matched_datasets_grass and Matched_datasets_forest
 
 anyNA(EVA_veg$Cover_perc) #FALSE
+
+#check if there are PlotID including only zero-cover plants - no plots are lost due to all species having zero cover
+EVA_veg[, .(All_zero = all(Cover_perc == 0)), by = PlotID][(All_zero), PlotID] #empty integer - notice that All_zero is in brackets to subset rows == TRUE
 
 #--grass
 
@@ -233,6 +243,7 @@ gc()
 
 #sanity check on remaining zero-cover rows
 sum(unlist(lapply(EVA_veg_grass, function(eco) sapply(eco, function(prd) sum(prd[['Cover_perc']] == 0)))))
+sum(unlist(lapply(EVA_veg_forest, function(eco) sapply(eco, function(prd) sum(prd[['Cover_perc']] == 0)))))
 
 #check class of EVA_veg_grass and forest
 unique(sapply(EVA_veg_grass, function(eco) unique(sapply(eco, class)))) #data.frame
@@ -241,7 +252,7 @@ unique(sapply(EVA_veg_forest, function(eco) unique(sapply(eco, class)))) #data.f
 #--create vector with colnames to use in the formatsite table
 
 #dropping Slope because this won't be used in the GDMs
-col_to_keep <- c('PlotID', 'Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value', 'X_laea', 'Y_laea')
+col_to_keep <- c('PlotID', 'Releve_area_m2', 'Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value', 'X_laea', 'Y_laea')
 
 #--------------------------------------------------------------grasslands
 
@@ -287,7 +298,7 @@ all(mapply(function(x, y) {
 
 #check reproducibility
 #set.seed(48)
-#to_del <- add_noise_coords(mthc_lst = Matched_datasets_grass, duply_ids = EVA_duply_unique, eps_sd = 1, crs_proj = 3035)
+#to_del <- add_noise_coords(mtch_lst = Matched_datasets_grass, duply_ids = EVA_duply_unique, eps_sd = 1, crs_proj = 3035)
 
 set.seed(48)
 Matched_datasets_grass <- add_noise_coords(mtch_lst = Matched_datasets_grass, duply_ids = EVA_duply_unique, eps_sd = 1, crs_proj = 3035)
@@ -305,6 +316,8 @@ EVA_veg_grass <- veg_longtowide(veg_lst = EVA_veg_grass, mtch_lst = Matched_data
 #check potential NAs remaining in the list
 any(sapply(Matched_datasets_grass, function(eco) sapply(eco, anyNA)))
 any(sapply(EVA_veg_grass, function(eco) sapply(eco, anyNA)))
+
+####FROM HERE!!!!!!!!!!!
 
 #check correlation (vif) among predictors
 
