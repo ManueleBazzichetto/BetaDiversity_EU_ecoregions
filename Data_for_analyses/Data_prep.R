@@ -63,6 +63,8 @@ do.call(rbind, lapply(EVA_duply, function(i) sapply(i, length)))
 
 #3) The idea is to loop across ecoregions and run a series of functions on single ecoregions and save outputs [ideally on Prague's or any other available server]
 
+#!Note that I am applying a cap (max) to the number of dissimilarities to be analysed to allow running gdms without overwhelming the memory. The cap is set to 100 million pairs (1e+8). 
+#The cap is applied after excluding spatial duplicates.
 
 #--------------------------------------------------------------operations to execute before splitting grasslands and forests
 
@@ -317,18 +319,16 @@ EVA_veg_grass <- veg_longtowide(veg_lst = EVA_veg_grass, mtch_lst = Matched_data
 any(sapply(Matched_datasets_grass, function(eco) sapply(eco, anyNA)))
 any(sapply(EVA_veg_grass, function(eco) sapply(eco, anyNA)))
 
-####FROM HERE!!!!!!!!!!!
-
 #check correlation (vif) among predictors
 
 #probably not so useful to set a hard threshold (e.g., 2) since it's hard to predict effect of vif on coef's variance and CIs..
 #simply report max vif observed among ecoregions (and periods)
 
-#drop Elevation and keep roughness in
+#drop Elevation and keep Roughness in
 #note that Elevation has a low vif in some ecoregions, however I want to use the same predictors for all ecoregions - this is why I'm dropping only Elevation
-check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value'), vif_thr = 2)
-check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Roughness', 'Hmi_value'), vif_thr = 2)
-#check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Hmi_value'), vif_thr = 2)
+check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value', 'Releve_area_m2'), vif_thr = 2)
+check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Roughness', 'Hmi_value', 'Releve_area_m2'), vif_thr = 2)
+#check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Hmi_value', 'Releve_area_m2'), vif_thr = 2)
 
 #drop Elevation
 
@@ -362,10 +362,21 @@ Smp_size_datasets_gr <- as.data.frame(do.call(rbind, lapply(Matched_datasets_gra
 
 Smp_size_datasets_gr$Total <- with(Smp_size_datasets_gr, Period1 + Period2)
 
+#identify ecoregions that have, for one or both periods, a number of dissimilarity pairs that is above the cap of 1e+8
+#Important! Note that the number of dissimilarity pairs computed below includes comparisons among spatial duplicates,
+#which are yet to be excluded (note that EVA_duply_pairs may include pairs with PlotIDs already excluded from the Matched_datasets_*)
+
+#Period1
+which(with(Smp_size_datasets_gr, (Period1*(Period1 - 1)/2)) > 1e+08) #10
+
+#Period2
+which(with(Smp_size_datasets_gr, (Period2*(Period2 - 1)/2) > 1e+08)) #6, 10
+
+Smp_size_datasets_gr[c(6, 10), ] #EuAtl_mf for Period2 and WesEu_bf for both Periods
 
 #--create table formatted as input data for GDMs, drop dissimilarities between spatial duplicates and save data in local
 
-#save ecoregion specific lists including data for each period
+#save ecoregion-specific lists including data for each period
 
 #check eco and periods match among matched datasets, veg data and EVA_duply_pairs
 identical(names(Matched_datasets_grass), names(EVA_veg_grass)) #TRUE
@@ -384,24 +395,82 @@ all(sapply(names(Matched_datasets_grass), function(nm) {
   
   })) #TRUE
 
+
+####FROM HERE!!!!!!!!!!!!!!!!!!
+
 #process data and save objects
+
+#note that when the number of pairs exceeds the cap, pairs belonging to spatial duplicates are excluded before reducing the number of pairs to cap
+#for two main reasons: 1) removing pairs belonging to spatial duplicates may reduce total number of pairs to < cap (unlikely); and
+#2) removing pairs belonging to spatial duplicates after reducing number of pairs to cap may decrease the final number of pairs to < cap
+
+#cap for max dissimilarities - this value is valid for both grasslands and forests
+cap_for_diss <- 1e+08
 
 grass_names <- names(Matched_datasets_grass)
 
 prd_names <- names(Matched_datasets_grass[[1]])
 
+ids_to_drop <- vector(mode = 'list')
+
 tmp_list <- setNames(vector(mode = 'list', length = length(prd_names)), nm = prd_names)
+
+#set seed for reproducibility
+set.seed(48575)
 
 for(nm in grass_names) {
   
   for(prd in prd_names) {
     
+    #format vegetation and environmental data for gdms
+    
     tmp_list[[prd]] <- gdm::formatsitepair(bioData = EVA_veg_grass[[nm]][[prd]], bioFormat = 1, abundance = TRUE, siteColumn = 'PlotID',
                                    XColumn = 'X_laea', YColumn = 'Y_laea', predData = Matched_datasets_grass[[nm]][[prd]])
     
+    #drop unwanted combos
+    
     tmp_list[[prd]] <- drop_unwanted_combos(x = tmp_list[[prd]], combos = EVA_duply_pairs[[nm]][[prd]], col1 = 's1.PlotID_cov', col2 = 's2.PlotID_cov')
     
+    #save cols to drop from the final SitePair table
+    tmp_cols <- setdiff(colnames(tmp_list[[prd]]), c('s1.PlotID_cov', 's2.PlotID_cov'))
+    
+    if(nrow(tmp_list[[prd]]) > cap_for_diss) {
+      
+      #save all plot (not plot pairs!) ids
+      tmp_plot_ids <- union(x = tmp_list[[prd]][, 's1.PlotID_cov'], y = tmp_list[[prd]][, 's2.PlotID_cov'])
+      
+      #sample positions of pairs to exclude
+      tmp_pairs_pos_to_excl <- sample(x = nrow(tmp_list[[prd]]), size = (nrow(tmp_list[[prd]]) - cap_for_diss), replace = FALSE)
+      
+      #drop exceeding plot pairs
+      tmp_list[[prd]] <- tmp_list[[prd]][-tmp_pairs_pos_to_excl, ]
+      
+      #save remaining plot ids
+      tmp_left_plot_ids <- union(x = tmp_list[[prd]][, 's1.PlotID_cov'], y = tmp_list[[prd]][, 's2.PlotID_cov'])
+      
+      #drop tmp_cols
+      tmp_list[[prd]] <- tmp_list[[prd]][, tmp_cols]
+      
+      #count number of plots eventually excluded
+      num_plot_excl <- (length(tmp_plot_ids) - length(tmp_left_plot_ids))
+      
+      #print a message
+      message(paste(num_plot_excl, 'were excluded for', nm, 'in', prd, sep = ' '))
+      
+      #save position of final selection of plots
+      ids_to_drop[[nm]][[prd]] <- tmp_pairs_pos_to_excl
+      
+      #rm objects no longer used
+      rm(tmp_plot_ids, tmp_pairs_pos_to_excl, tmp_left_plot_ids, num_plot_excl)
+      
+    } else {
+      
+      #drop tmp_cols
+      tmp_list[[prd]] <- tmp_list[[prd]][, tmp_cols]
+      
     }
+    
+  }
   
   save(tmp_list, file = paste('/Temporary_proj_run_GDM/tmp_obj_for_gdm_grass/', nm, '_grass.RData', sep = ''))
   
@@ -409,7 +478,10 @@ for(nm in grass_names) {
   
   }
 
-rm(nm, prd, tmp_list)
+#to be updated!!
+rm(nm, prd, tmp_cols, tmp_list)
+
+
 
 #samples size of formatted tables for GDMs before excluding dissimilarities among spatial duplicates
 #I am creating this vector to evaluate range of sample sizes and set proportion of dissimilarities to use

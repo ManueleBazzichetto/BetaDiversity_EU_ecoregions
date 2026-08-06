@@ -215,8 +215,8 @@ rm(test_to_del, test_to_del_2, test_res_del)
 
 #-- function for computing vif of predictors in Matched_datasets_*
 
-#vif(lm(PlotID ~ Prcp + Tavg + Elevation + Roughness + Hmi_value, data = Matched_datasets_grass$Alps_cmf$Period1))
-#vif(lm(X_laea ~ Prcp + Tavg + Elevation + Roughness + Hmi_value, data = Matched_datasets_grass$Alps_cmf$Period1))
+#vif(lm(PlotID ~ Prcp + Tavg + Elevation + Roughness + Hmi_value + Releve_area_m2, data = Matched_datasets_grass$Alps_cmf$Period1))
+#vif(lm(X_laea ~ Prcp + Tavg + Elevation + Roughness + Hmi_value + Releve_area_m2, data = Matched_datasets_grass$Alps_cmf$Period1))
 
 check_multicoll <- function(mtch_lst, vars, vif_thr = 2) {
   
@@ -260,8 +260,10 @@ check_multicoll <- function(mtch_lst, vars, vif_thr = 2) {
   }
 
 
-check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Hmi_value'))
+check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value', 'Releve_area_m2'))
 
+
+#########FROM HERE!!!!!!!!!!!!!!!!
 
 
 #-- function to drop dissimilarities (rows) between spatial duplicates from input table for GDMs 
@@ -289,9 +291,12 @@ drop_unwanted_combos <- function(x, combos, col1 = 's1.PlotID_cov', col2 = 's2.P
   #print number of combos excluded
   message(paste('Removing', length(plot_to_exc), 'combos', sep = ' '))
   
+  #rm objects that are no longer used
+  rm(plot_combo1, plot_combo2)
+  
   #drop combos columns
-  x[[col1]] <- NULL
-  x[[col2]] <- NULL
+  #x[[col1]] <- NULL
+  #x[[col2]] <- NULL
   
   #return result
   return(x)
