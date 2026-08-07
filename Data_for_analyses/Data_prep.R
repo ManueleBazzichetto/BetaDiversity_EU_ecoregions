@@ -482,7 +482,7 @@ for(nm in grass_names) {
 #rm objects created in the loop
 rm(nm, prd, tmp_cols, tmp_list)
 
-
+#####FROM HERE!!!!!!!!!!!!
 
 #samples size of formatted tables for GDMs before excluding dissimilarities among spatial duplicates
 #I am creating this vector to evaluate range of sample sizes and set proportion of dissimilarities to use
