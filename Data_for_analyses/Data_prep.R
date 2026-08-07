@@ -395,12 +395,9 @@ all(sapply(names(Matched_datasets_grass), function(nm) {
   
   })) #TRUE
 
-
-####FROM HERE!!!!!!!!!!!!!!!!!!
-
 #process data and save objects
 
-#note that when the number of pairs exceeds the cap, pairs belonging to spatial duplicates are excluded before reducing the number of pairs to cap
+#note that when the number of pairs exceeds the cap (1e+08), the plot pairs belonging to spatial duplicates are excluded before reducing the number of pairs to cap
 #for two main reasons: 1) removing pairs belonging to spatial duplicates may reduce total number of pairs to < cap (unlikely); and
 #2) removing pairs belonging to spatial duplicates after reducing number of pairs to cap may decrease the final number of pairs to < cap
 
@@ -411,7 +408,7 @@ grass_names <- names(Matched_datasets_grass)
 
 prd_names <- names(Matched_datasets_grass[[1]])
 
-ids_to_drop <- vector(mode = 'list')
+pos_to_drop_grass <- vector(mode = 'list') #this list won't grow large, so it is ok to leave it empty
 
 tmp_list <- setNames(vector(mode = 'list', length = length(prd_names)), nm = prd_names)
 
@@ -427,17 +424,17 @@ for(nm in grass_names) {
     tmp_list[[prd]] <- gdm::formatsitepair(bioData = EVA_veg_grass[[nm]][[prd]], bioFormat = 1, abundance = TRUE, siteColumn = 'PlotID',
                                    XColumn = 'X_laea', YColumn = 'Y_laea', predData = Matched_datasets_grass[[nm]][[prd]])
     
-    #drop unwanted combos
+    #drop unwanted combos (spatial duplicates)
     
     tmp_list[[prd]] <- drop_unwanted_combos(x = tmp_list[[prd]], combos = EVA_duply_pairs[[nm]][[prd]], col1 = 's1.PlotID_cov', col2 = 's2.PlotID_cov')
     
-    #save cols to drop from the final SitePair table
+    #save cols to keep in the final SitePair table
     tmp_cols <- setdiff(colnames(tmp_list[[prd]]), c('s1.PlotID_cov', 's2.PlotID_cov'))
     
     if(nrow(tmp_list[[prd]]) > cap_for_diss) {
       
       #save all plot (not plot pairs!) ids
-      tmp_plot_ids <- union(x = tmp_list[[prd]][, 's1.PlotID_cov'], y = tmp_list[[prd]][, 's2.PlotID_cov'])
+      tmp_plot_ids <- union(x = tmp_list[[prd]][['s1.PlotID_cov']], y = tmp_list[[prd]][['s2.PlotID_cov']])
       
       #sample positions of pairs to exclude
       tmp_pairs_pos_to_excl <- sample(x = nrow(tmp_list[[prd]]), size = (nrow(tmp_list[[prd]]) - cap_for_diss), replace = FALSE)
@@ -446,39 +443,43 @@ for(nm in grass_names) {
       tmp_list[[prd]] <- tmp_list[[prd]][-tmp_pairs_pos_to_excl, ]
       
       #save remaining plot ids
-      tmp_left_plot_ids <- union(x = tmp_list[[prd]][, 's1.PlotID_cov'], y = tmp_list[[prd]][, 's2.PlotID_cov'])
+      tmp_left_plot_ids <- union(x = tmp_list[[prd]][['s1.PlotID_cov']], y = tmp_list[[prd]][['s2.PlotID_cov']])
       
-      #drop tmp_cols
+      #keep tmp_cols
       tmp_list[[prd]] <- tmp_list[[prd]][, tmp_cols]
       
       #count number of plots eventually excluded
       num_plot_excl <- (length(tmp_plot_ids) - length(tmp_left_plot_ids))
       
       #print a message
-      message(paste(num_plot_excl, 'were excluded for', nm, 'in', prd, sep = ' '))
+      message(paste(num_plot_excl, 'plots were excluded for', nm, 'in', prd, sep = ' '))
       
       #save position of final selection of plots
-      ids_to_drop[[nm]][[prd]] <- tmp_pairs_pos_to_excl
+      pos_to_drop_grass[[nm]][[prd]] <- tmp_pairs_pos_to_excl
       
       #rm objects no longer used
       rm(tmp_plot_ids, tmp_pairs_pos_to_excl, tmp_left_plot_ids, num_plot_excl)
       
+      gc()
+      
     } else {
       
-      #drop tmp_cols
+      #keep tmp_cols
       tmp_list[[prd]] <- tmp_list[[prd]][, tmp_cols]
       
     }
     
   }
   
-  save(tmp_list, file = paste('/Temporary_proj_run_GDM/tmp_obj_for_gdm_grass/', nm, '_grass.RData', sep = ''))
+  save(tmp_list, file = paste('tables_for_gdm_grassland/', nm, '_grass.RData', sep = ''))
   
   tmp_list <- setNames(vector(mode = 'list', length = length(prd_names)), nm = prd_names)
   
+  gc()
+  
   }
 
-#to be updated!!
+#rm objects created in the loop
 rm(nm, prd, tmp_cols, tmp_list)
 
 

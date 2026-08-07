@@ -263,9 +263,6 @@ check_multicoll <- function(mtch_lst, vars, vif_thr = 2) {
 check_multicoll(mtch_lst = Matched_datasets_grass, vars = c('Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value', 'Releve_area_m2'))
 
 
-#########FROM HERE!!!!!!!!!!!!!!!!
-
-
 #-- function to drop dissimilarities (rows) between spatial duplicates from input table for GDMs 
 
 #Important!! Check both Plot1-Plot2 and Plot2-Plot1 against duply_pairs
@@ -284,7 +281,7 @@ drop_unwanted_combos <- function(x, combos, col1 = 's1.PlotID_cov', col2 = 's2.P
   plot_combo2 <- paste(x[[col2]], x[[col1]], sep = '-')
   
   #get positions of combos to drop
-  plot_to_exc <- which((plot_combo1 %in% combos | plot_combo2 %in% combos))
+  plot_to_exc <- which((plot_combo1 %in% combos) | (plot_combo2 %in% combos))
   
   x <- x[-(plot_to_exc), ]
   
@@ -294,7 +291,7 @@ drop_unwanted_combos <- function(x, combos, col1 = 's1.PlotID_cov', col2 = 's2.P
   #rm objects that are no longer used
   rm(plot_combo1, plot_combo2)
   
-  #drop combos columns
+  #drop combos columns -> this is done in the loop after removing plot pairs to reach cap
   #x[[col1]] <- NULL
   #x[[col2]] <- NULL
   
@@ -304,6 +301,7 @@ drop_unwanted_combos <- function(x, combos, col1 = 's1.PlotID_cov', col2 = 's2.P
 }
 
 #check
+#Note: I originally tested WesEu_bf$Period1 to assess whether gdm could manage to handle the ecoregion with the largest number of plots
 test_to_del <- Matched_datasets_grass$Sar_mf$Period1
 test_to_del_2 <- EVA_veg_grass$Sar_mf$Period1
 row.names(test_to_del_2) <- test_to_del_2$PlotID
@@ -313,7 +311,11 @@ test_to_del <- gdm::formatsitepair(bioData = test_to_del_2, bioFormat = 1, abund
 
 head(test_to_del)
 
-sum(paste(test_to_del$s1.PlotID_cov, test_to_del$s2.PlotID_cov, sep = '-') %in% EVA_duply_pairs$Sar_mf$Period1) #3508
+#check structure of the SitePair table
+str(test_to_del) #Releve_area_m2 is num; PlotID_cov is int
+
+
+sum(paste(test_to_del$s1.PlotID_cov, test_to_del$s2.PlotID_cov, sep = '-') %in% EVA_duply_pairs$Sar_mf$Period1) #3,745 (out of 137,315 for both grass and for)
 sum(paste(test_to_del$s2.PlotID_cov, test_to_del$s1.PlotID_cov, sep = '-') %in% EVA_duply_pairs$Sar_mf$Period1) #0
 
 to_drop_del <- drop_unwanted_combos(x = test_to_del, combos = EVA_duply_pairs$Sar_mf$Period1)
