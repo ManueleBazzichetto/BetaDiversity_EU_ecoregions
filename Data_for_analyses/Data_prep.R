@@ -12,6 +12,8 @@ library(vegan)
 library(data.table)
 library(car) #for VIF
 
+## ------------------------------------------------- 1) TABLES FORMATTED FOR GDMS
+
 #NOTES:
 
 #it is not possible to run GDMs for all ecoregions simultaneously, as objects would overwhelm the memory
@@ -55,7 +57,7 @@ load(file = '/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Selected_ecor_names.RData'
 do.call(rbind, lapply(EVA_duply, function(i) sapply(i, length)))
 
 
-##TO BE UPDATED IF I ADD OTHER STEPS, E.G. COMPUTATION OF OTHER BETA DIVE INDICES FOR DISTANCE-DECAY MODELS
+##Steps for computing tables formatted for GDMs
 
 #1) prepare data for gdm::formatsitepair()
 
@@ -668,11 +670,8 @@ for(nm in forest_names) {
 rm(nm, prd, tmp_list)
 
 
-####FROM HERE!!!!!!!!!
-
 #samples size of formatted tables for GDMs before excluding dissimilarities among spatial duplicates
-#I am creating this vector to evaluate range of sample sizes and set proportion of dissimilarities to use
-#when computing variable importance
+#I am creating this table to evaluate range of sample sizes
 
 diss_size_for <- do.call(rbind, lapply(Matched_datasets_forest, function(eco) {
   
@@ -688,11 +687,65 @@ diss_size_for <- do.call(rbind, lapply(Matched_datasets_forest, function(eco) {
 quantile(as.vector(diss_size_for), probs = c(.25, .5, .75))
 
 
+## ------------------------------------------------- 2) TABLES FORMATTED FOR DISTANCE-DECAY MODELS
+
+######FROM HERE!!!!!!!!!
+
+#Complete for loop below. Create empty objects for storing results and check code for dropping same plot pairs as above for ecoregions exceeding cap in one or both periods
+
+
+#The code below is used to compute datasets to be used for fitting distance-decay models of different dissimilarity indices.
+#The models are used to estimte how average dissimilarity at short distances between plots differs between periods.
+#The models will also control for the difference between plot sizes.
+
+#IMPORTANT! EVA_veg_* and Matched_datasets_* include spatial duplicates moved over space by a small amount of noise added to their geo coordinates (see code above).
+#This is done to simulate that they are different sites - formatsitepair assumes sites have unique geo coordinates.
+#As done above, spatial duplicates are excluded from the final datasets.
+
+#The process to obtain the different distance indices should proceed as follows:
+
+#Obtain a site x species data.frame to be used as input for gdm::formatsitepair (use EVA_veg_* for this).
+#Here, notice that EVA_veg_* includes a column with the PlotID (1st column) and the last two columns include the coordinates.
+#Also notice that the columns including the coordinates can be excluded from the site x species matrix if they are already present in the predData (!)
+#The following indices are computed: Bray-Curtis, Horn (notice that in vegan::vegdist 'horn' means 'Morisita-Horn - https://github.com/vegandevs/vegan/issues/444),
+#Jaccard (after having transforming the abundance matrix into a 1/0 matrix using decostand with method 'pa').
+#Finally, the Euclidean distance between plots is computed using the geo coordinates.
+
+
+
+#for(nm in grass_names) {
+#  
+#  for(prd in prd_names) {
+#    
+#    tmp_list[[prd]] <- get_distances_ind(veg_mat = EVA_veg_grass[[nm]][[prd]], pred_mat = Matched_datasets_grass[[nm]][[prd]])
+#    
+#    tmp_list[[prd]] <- drop_unwanted_combos(x = tmp_list[[prd]], combos = EVA_duply_pairs[[nm]][[prd]], col1 = 's1.PlotID_cov', col2 = 's2.PlotID_cov')
+#    
+#    if(!is.null(pos_to_drop_grass[[nm]][[prd]])) {
+#      
+#      tmp_list[[prd]] <- tmp_list[[prd]][-pos_to_drop_grass[[nm]][[prd]], ]
+#      
+#    }
+#    
+#  }
+#  
+#  #save()
+#  
+#  #reset tmp_list
+#  
+#  }
+
+
+
+
+
+
+
 #save EVA_veg_* datasets to be used in another project to assess how beta diversity changes along geographical distance
 #save EVA_duply_pairs for the same reason
-
-save(EVA_veg_grass, EVA_veg_forest, file = '/Temporary_proj_beta_dist/EVA_veg_datasets.RData')
-save(EVA_duply_pairs, file = '/Temporary_proj_beta_dist/EVA_duply_pairs_list.RData')
+#
+#save(EVA_veg_grass, EVA_veg_forest, file = '/Temporary_proj_beta_dist/EVA_veg_datasets.RData')
+#save(EVA_duply_pairs, file = '/Temporary_proj_beta_dist/EVA_duply_pairs_list.RData')
 
 
 
