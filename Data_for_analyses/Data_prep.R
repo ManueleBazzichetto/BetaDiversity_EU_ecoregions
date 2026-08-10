@@ -482,17 +482,17 @@ for(nm in grass_names) {
 #rm objects created in the loop
 rm(nm, prd, tmp_cols, tmp_list)
 
-#####FROM HERE!!!!!!!!!!!!
-
-#samples size of formatted tables for GDMs before excluding dissimilarities among spatial duplicates
-#I am creating this vector to evaluate range of sample sizes and set proportion of dissimilarities to use
-#when computing variable importance
+#final samples size of formatted tables for GDMs before excluding dissimilarities among spatial duplicates
+#and reducing max number of plot pairs to cap in case sample size is above cap (1e+08)
+#I am creating this table to evaluate range of sample sizes
 
 diss_size_grass <- do.call(rbind, lapply(Matched_datasets_grass, function(eco) {
   
   res <- sapply(eco, nrow)
   
   res <- (res*(res - 1))/2
+  
+  if(any(res > cap_for_diss)) res[which(res > cap_for_diss)] <- 1e+08
   
   return(res)
   
@@ -568,9 +568,9 @@ any(sapply(EVA_veg_forest, function(eco) sapply(eco, anyNA)))
 #simply report max vif observed among ecoregions (and periods)
 
 #dropping only Elevation for same reasons as reported for grasslands
-check_multicoll(mtch_lst = Matched_datasets_forest, vars = c('Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value'), vif_thr = 2)
-check_multicoll(mtch_lst = Matched_datasets_forest, vars = c('Prcp', 'Tavg', 'Roughness', 'Hmi_value'), vif_thr = 2)
-#check_multicoll(mtch_lst = Matched_datasets_forest, vars = c('Prcp', 'Tavg', 'Hmi_value'), vif_thr = 2)
+check_multicoll(mtch_lst = Matched_datasets_forest, vars = c('Prcp', 'Tavg', 'Elevation', 'Roughness', 'Hmi_value', 'Releve_area_m2'), vif_thr = 2)
+check_multicoll(mtch_lst = Matched_datasets_forest, vars = c('Prcp', 'Tavg', 'Roughness', 'Hmi_value', 'Releve_area_m2'), vif_thr = 2)
+#check_multicoll(mtch_lst = Matched_datasets_forest, vars = c('Prcp', 'Tavg', 'Hmi_value', 'Releve_area_m2'), vif_thr = 2)
 
 #drop Elevation
 
@@ -604,6 +604,8 @@ Smp_size_datasets_for <- as.data.frame(do.call(rbind, lapply(Matched_datasets_fo
 
 Smp_size_datasets_for$Total <- with(Smp_size_datasets_for, Period1 + Period2)
 
+#no ecoregion will have period-specific sample size greater than cap
+sapply(Smp_size_datasets_for, max) #10054*(10054-1)/2 (50,536,431)
 
 #--create table formatted as input data for GDMs, drop dissimilarities between spatial duplicates and save data in local
 
@@ -631,6 +633,8 @@ all(sapply(names(Matched_datasets_forest), function(nm) {
 
 exists(x = 'nm'); exists(x = 'prd'); exists(x = 'tmp_list') #FALSE*3
 
+#notice that as no ecoregion has a period-specific sample size greater than cap, there is no need to add
+#code for dropping a random number of plot pairs in the for loop below
 
 forest_names <- names(Matched_datasets_forest)
 
@@ -648,16 +652,23 @@ for(nm in forest_names) {
     
     tmp_list[[prd]] <- drop_unwanted_combos(x = tmp_list[[prd]], combos = EVA_duply_pairs[[nm]][[prd]], col1 = 's1.PlotID_cov', col2 = 's2.PlotID_cov')
     
+    #drop PlotID_cov columns
+    tmp_list[[prd]] <- tmp_list[[prd]][, setdiff(colnames(tmp_list[[prd]]), c('s1.PlotID_cov', 's2.PlotID_cov'))]
+    
   }
   
-  save(tmp_list, file = paste('/Temporary_proj_run_GDM/tmp_obj_for_gdm_forest/', nm, '_forest.RData', sep = ''))
+  save(tmp_list, file = paste('tables_for_gdm_forest/', nm, '_forest.RData', sep = ''))
   
   tmp_list <- setNames(vector(mode = 'list', length = length(prd_names)), nm = prd_names)
+  
+  gc()
   
 }
 
 rm(nm, prd, tmp_list)
 
+
+####FROM HERE!!!!!!!!!
 
 #samples size of formatted tables for GDMs before excluding dissimilarities among spatial duplicates
 #I am creating this vector to evaluate range of sample sizes and set proportion of dissimilarities to use
