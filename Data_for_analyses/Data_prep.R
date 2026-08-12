@@ -689,52 +689,94 @@ quantile(as.vector(diss_size_for), probs = c(.25, .5, .75))
 
 ## ------------------------------------------------- 2) TABLES FORMATTED FOR DISTANCE-DECAY MODELS
 
-######FROM HERE!!!!!!!!!
-
-#Complete for loop below. Create empty objects for storing results and check code for dropping same plot pairs as above for ecoregions exceeding cap in one or both periods
-
-
-#The code below is used to compute datasets to be used for fitting distance-decay models of different dissimilarity indices.
-#The models are used to estimte how average dissimilarity at short distances between plots differs between periods.
+#The code below is used to compute datasets to be used for fitting distance-decay models for different dissimilarity indices (Bray-Curtis, Jaccard and Horn-Morisita).
+#The models are used to estimate how average dissimilarity at short distances between plots differs between periods.
 #The models will also control for the difference between plot sizes.
 
-#IMPORTANT! EVA_veg_* and Matched_datasets_* include spatial duplicates moved over space by a small amount of noise added to their geo coordinates (see code above).
+#IMPORTANT! EVA_veg_* and Matched_datasets_* include spatial duplicates moved a little bit over space by adding a small amount of noise to their geo coordinates (see code above).
 #This is done to simulate that they are different sites - formatsitepair assumes sites have unique geo coordinates.
-#As done above, spatial duplicates are excluded from the final datasets.
+#As done above, spatial duplicates are excluded from the final datasets (tables for fitting distance-decay models).
 
 #The process to obtain the different distance indices should proceed as follows:
 
-#Obtain a site x species data.frame to be used as input for gdm::formatsitepair (use EVA_veg_* for this).
+#1) Obtain a site x species data.frame to be used as input for gdm::formatsitepair (use EVA_veg_* for this).
 #Here, notice that EVA_veg_* includes a column with the PlotID (1st column) and the last two columns include the coordinates.
 #Also notice that the columns including the coordinates can be excluded from the site x species matrix if they are already present in the predData (!)
-#The following indices are computed: Bray-Curtis, Horn (notice that in vegan::vegdist 'horn' means 'Morisita-Horn - https://github.com/vegandevs/vegan/issues/444),
+
+#2) The following indices are then computed: Bray-Curtis, Horn (notice that in vegan::vegdist 'horn' means 'Morisita-Horn - https://github.com/vegandevs/vegan/issues/444),
 #Jaccard (after having transforming the abundance matrix into a 1/0 matrix using decostand with method 'pa').
-#Finally, the Euclidean distance between plots is computed using the geo coordinates.
+
+#3) Finally, the Euclidean distance between plots is computed using the geo coordinates.
+
+# ------ grasslands
+
+exists('tmp_list') #FALSE
+
+tmp_list <- setNames(object = vector(mode = 'list', length = length(prd_names)), nm = prd_names)
 
 
+for(nm in grass_names) {
+  
+  for(prd in prd_names) {
+    
+    #compute indices and geo distance
+    tmp_list[[prd]] <- get_distances_ind(veg_mat = EVA_veg_grass[[nm]][[prd]], pred_mat = Matched_datasets_grass[[nm]][[prd]])
+    
+    #drop spatial duplicates
+    tmp_list[[prd]] <- drop_unwanted_combos(x = tmp_list[[prd]], combos = EVA_duply_pairs[[nm]][[prd]], col1 = 's1.PlotID_cov', col2 = 's2.PlotID_cov')
+    
+    #if processing an ecoregion exceeding cap, exclude pairs at the same positions excluded above when deriving tables formatted for GDMs
+    if(!is.null(pos_to_drop_grass[[nm]][[prd]])) {
+      
+      tmp_list[[prd]] <- tmp_list[[prd]][-pos_to_drop_grass[[nm]][[prd]], ]
+      
+    }
+    
+  }
+  
+  #save output - list with, for each period, the table for fitting the distance-decay models
+  save(tmp_list, file = paste0('tables_for_ddmodels_grassland/', nm, '_ddmod_grass.RData'))
+  
+  #reset tmp_list
+  tmp_list <- setNames(object = vector(mode = 'list', length = length(prd_names)), nm = prd_names)
+  
+  gc()
+  
+  }
 
-#for(nm in grass_names) {
-#  
-#  for(prd in prd_names) {
-#    
-#    tmp_list[[prd]] <- get_distances_ind(veg_mat = EVA_veg_grass[[nm]][[prd]], pred_mat = Matched_datasets_grass[[nm]][[prd]])
-#    
-#    tmp_list[[prd]] <- drop_unwanted_combos(x = tmp_list[[prd]], combos = EVA_duply_pairs[[nm]][[prd]], col1 = 's1.PlotID_cov', col2 = 's2.PlotID_cov')
-#    
-#    if(!is.null(pos_to_drop_grass[[nm]][[prd]])) {
-#      
-#      tmp_list[[prd]] <- tmp_list[[prd]][-pos_to_drop_grass[[nm]][[prd]], ]
-#      
-#    }
-#    
-#  }
-#  
-#  #save()
-#  
-#  #reset tmp_list
-#  
-#  }
+rm(nm, prd, tmp_list)
 
+
+# ------ forests
+
+exists('tmp_list') #
+
+tmp_list <- setNames(object = vector(mode = 'list', length = length(prd_names)), nm = prd_names)
+
+
+for(nm in forest_names) {
+  
+  for(prd in prd_names) {
+    
+    #compute indices and geo distance
+    tmp_list[[prd]] <- get_distances_ind(veg_mat = EVA_veg_forest[[nm]][[prd]], pred_mat = Matched_datasets_forest[[nm]][[prd]])
+    
+    #drop spatial duplicates
+    tmp_list[[prd]] <- drop_unwanted_combos(x = tmp_list[[prd]], combos = EVA_duply_pairs[[nm]][[prd]], col1 = 's1.PlotID_cov', col2 = 's2.PlotID_cov')
+    
+    }
+  
+  #save output - list with, for each period, the table for fitting the distance-decay models
+  save(tmp_list, file = paste0('tables_for_ddmodels_forest/', nm, '_ddmod_forest.RData'))
+  
+  #reset tmp_list
+  tmp_list <- setNames(object = vector(mode = 'list', length = length(prd_names)), nm = prd_names)
+  
+  gc()
+  
+  }
+
+rm(nm, prd, tmp_list)
 
 
 
