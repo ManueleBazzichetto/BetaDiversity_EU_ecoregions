@@ -749,7 +749,7 @@ rm(nm, prd, tmp_list)
 
 # ------ forests
 
-exists('tmp_list') #
+exists('tmp_list') #FALSE
 
 tmp_list <- setNames(object = vector(mode = 'list', length = length(prd_names)), nm = prd_names)
 
