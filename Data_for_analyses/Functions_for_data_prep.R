@@ -383,12 +383,6 @@ test_small_bc <- gdm::formatsitepair(bioData = test_small_vegmat, bioFormat = 1,
 #select only relevant columns
 test_small_bc <- test_small_bc[c('distance', 's1.Releve_area_m2', 's1.PlotID_cov', 's2.Releve_area_m2', 's2.PlotID_cov')]
 
-#PlotID_cov columns are pasted to create a single PlotID_pairs column
-test_small_bc$PlotID_pairs <- paste(test_small_bc$s1.PlotID_cov, test_small_bc$s2.PlotID_cov, sep = '-')
-
-#the individual PlotID columns can be excluded
-test_small_bc <- test_small_bc[c('distance', 's1.Releve_area_m2', 's2.Releve_area_m2', 'PlotID_pairs')]
-
 #compute the geographical (Euclidean) distance between sites
 
 #select only the PlotID and coords columns in test_small_predmat to create an sf object
@@ -469,7 +463,7 @@ test_final_out$s1.Releve_area_m2 <- NULL
 test_final_out$s2.Releve_area_m2 <- NULL
 
 #re-order columns
-test_final_out <- test_final_out[c(1, 3, 4, 5, 2, 6)]
+test_final_out <- test_final_out[c(1, 4, 5, 6, 2, 3, 7)]
 
 hist(test_final_out$Abs_diff_plot_size)
 hist(sqrt(test_final_out$Abs_diff_plot_size))
@@ -486,10 +480,10 @@ get_distances_ind <- function(veg_mat, pred_mat) {
   require(vegan)
   require(sf)
   
-  #check that PlotID, X_laea, Y_laea, and Releve_area_m2 are included in both veg_mat and pred_mat
+  #check that PlotID, X_laea, Y_laea, Releve_area_m2, and PlotID_cov are included in veg_mat and pred_mat
   check_cols <- c("PlotID", "X_laea", "Y_laea", "Releve_area_m2", "PlotID_cov")
   
-  if(!isTRUE(all(check_cols[c(1, 2, 3)] %in% colnames(veg_mat)) & all(check_cols %in% colnames(pred_mat)))) stop('veg_mat must include PlotID, coords, and pred_mat also plot size and PlotID_cov')
+  if(!isTRUE(all(check_cols[c(1, 2, 3)] %in% colnames(veg_mat)) & all(check_cols %in% colnames(pred_mat)))) stop('veg_mat must include PlotID, coords, while pred_mat also plot size and PlotID_cov')
   
   #select only check_cols in pred_mat
   pred_mat <- pred_mat[check_cols]
@@ -568,9 +562,6 @@ get_distances_ind <- function(veg_mat, pred_mat) {
     
     }))
   
-  #create col with plot id pairs and drop individual plot id columns
-  res$PlotID_pairs <- paste(res[['s1.PlotID_cov']], res[['s2.PlotID_cov']], sep = '-')
-  
   #create col with abs difference in plot size and drop individual plot size columns
   res$Abs_diff_plot_size <- abs(res[['s1.Releve_area_m2']] - res[['s2.Releve_area_m2']])
   
@@ -578,7 +569,7 @@ get_distances_ind <- function(veg_mat, pred_mat) {
   res$euc_dist <- euc_dist
   
   #only keep id and plot pairs cols
-  res <- res[c('bray', 'horn', 'jaccard', 'euc_dist', 'PlotID_pairs', 'Abs_diff_plot_size')]
+  res <- res[c('bray', 'horn', 'jaccard', 'euc_dist', 's1.PlotID_cov', 's2.PlotID_cov', 'Abs_diff_plot_size')]
   
   #return result
   return(res)
