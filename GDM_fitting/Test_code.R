@@ -1,5 +1,5 @@
 
-#Test fitting GDMs and computing deviance partitions using the gdm R package
+#Test code for fitting GDMs and computing deviance partitions using the gdm R package
 
 library(gdm)
 
