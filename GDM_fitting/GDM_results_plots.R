@@ -4,24 +4,148 @@
 
 library(ggplot2)
 library(ggpubr)
+library(ggrepel)
+
+
+# ---- objects used in plots
+
+#get vector of ecoregions shared by grasslands and forests
+ecor_union_nm <- intersect(ecor_grass_nm, ecor_for_nm)
+
+#get vector of ecoregions unique to grasslands
+ecor_unq_grass_nm <- setdiff(ecor_grass_nm, ecor_for_nm)
+
+#get vector of ecoregions unique to forests
+ecor_unq_for_nm <- setdiff(ecor_for_nm, ecor_grass_nm)
+
+#load data.frame with information on ecoregion position along elevation, long and lat gradients
+load('/MOTIVATE/GDM_EuropeanEcoregions/tmp_obj/Lon_lat_alt_ecoregions.RData')
+
+#add ECO_NM col to lon_lat_alt_* data.frames
+lon_lat_alt_grass$ECO_NM <- row.names(lon_lat_alt_grass)
+lon_lat_alt_for$ECO_NM <- row.names(lon_lat_alt_for)
+
+#check ecor names match
+setdiff(x = lon_lat_alt_grass$ECO_NM, y = unique(dev_part_grass$ECO_NM)) #chr(0)
+setdiff(x = unique(dev_part_grass$ECO_NM), y = lon_lat_alt_grass$ECO_NM) #chr(0)
+
+setdiff(x = lon_lat_alt_for$ECO_NM, y = unique(dev_part_for$ECO_NM)) #chr(0)
+setdiff(x = unique(dev_part_for$ECO_NM), y = lon_lat_alt_for$ECO_NM) #chr(0)
 
 
 # ------------------------------ grasslands
 
 
-#deviance explained
+# ------ deviance explained
 
 expl_dev_grass_long <- data.frame(Expl_dev = as.vector(expl_dev_grass),
                                   ECO_NM = rownames(expl_dev_grass), #this gets recycled
                                   Period = rep(colnames(expl_dev_grass), each = nrow(expl_dev_grass))) 
 
 
-
-ggplot(data = expl_dev_grass_long, aes(x = ECO_NM, y = Expl_dev, fill = Period)) +
-  geom_col(position = 'identity') 
-
+#order ecoregions so that those included in both grass and for sets appear first
+expl_dev_grass_long$ECO_NM <- factor(expl_dev_grass_long$ECO_NM, levels = c(sort(ecor_union_nm), sort(ecor_unq_grass_nm)))
 
 
+expl_dev_grass_plot <- ggplot(data = expl_dev_grass_long, aes(x = ECO_NM, y = Expl_dev, fill = Period)) +
+  geom_col(position = position_dodge2(width = .5)) +
+  scale_fill_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
+  geom_hline(yintercept = 5, colour = 'orange', linetype = 'dashed', lwd = 1.2) +
+  ylab('Explained deviance (%)') + xlab(NULL) + ggtitle('Grassland') +
+  theme_pubr() +
+  theme(axis.text.x.bottom = element_text(angle = 45, hjust = 1, vjust = 1, size = 14),
+        axis.text.y.left = element_text(size = 14), axis.title.y = element_text(size = 16),
+        legend.text = element_text(size = 16), legend.title = element_text(size = 16), legend.position = 'bottom',
+        title = element_text(size = 18))
+
+# ------ deviance partitions
+
+class(dev_part_grass$VARIABLE_SET) #chr
+unique(dev_part_grass$VARIABLE_SET) #
+
+#consider unique contribution of climate and human, meaning that the part of deviance shared by the two components is excluded
+#this should be the quantity more similar to the variable imporance computed by the gdm package
+cl_hum_part_grass <- dev_part_grass[dev_part_grass$VARIABLE_SET %in% c('climate alone', 'human alone'), ]
+
+#reformat data.frame to have separate fields for deviance in Period1 and Period2
+
+cl_hum_part_grass_prd1 <- cl_hum_part_grass[cl_hum_part_grass$Period == 'Period1', ]
+cl_hum_part_grass_prd2 <- cl_hum_part_grass[cl_hum_part_grass$Period == 'Period2', ]
+
+#check fields actually match
+identical(cl_hum_part_grass_prd1$ECO_NM, cl_hum_part_grass_prd2$ECO_NM) #T
+identical(cl_hum_part_grass_prd1$VARIABLE_SET, cl_hum_part_grass_prd2$VARIABLE_SET) #T
+
+#modify colnames for period-specific quantities
+colnames(cl_hum_part_grass_prd1)[c(2, 3)] <- paste0(colnames(cl_hum_part_grass_prd1)[c(2, 3)], '_Prd1')
+colnames(cl_hum_part_grass_prd2)[c(2, 3)] <- paste0(colnames(cl_hum_part_grass_prd2)[c(2, 3)], '_Prd2')
+
+#cbind data.frames
+cl_hum_part_grass <- cbind(cl_hum_part_grass_prd1[, c('ECO_NM', 'VARIABLE_SET', 'DEVIANCE_Prd1', 'DEVIANCE_scaled_Prd1')],
+                           cl_hum_part_grass_prd2[, c('DEVIANCE_Prd2', 'DEVIANCE_scaled_Prd2')])
+
+
+#rm period-specific datasets
+rm(cl_hum_part_grass_prd1, cl_hum_part_grass_prd2)
+
+#add data on ecor position along elev, long and lat gradients
+cl_hum_part_grass <- dplyr::left_join(x = cl_hum_part_grass, y = lon_lat_alt_grass, by = 'ECO_NM')
+
+##FROM HERE!! Exclude ecoregions for which explained deviance was never equal to or larger than 5%
+#and re-code the ordering of ecoregions along gradients.
+
+
+ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
+  geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
+  geom_point(aes(colour = Alt_ord), size = 8, alpha = .6) +
+  geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
+                  box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
+  scale_color_viridis_c(name = 'Elevation',
+                        breaks = c(min(cl_hum_part_grass$Alt_ord), max(cl_hum_part_grass$Alt_ord)),
+                        labels = c('Low elevation', 'High elevation'), option = 'plasma') +
+  ylab('Explained deviance - Period2 (%)') + xlab('Explained deviance - Period1 (%)') +
+  ggtitle('Grassland - Elevation') +
+  facet_wrap(~ VARIABLE_SET) +
+  theme_pubr() +
+  theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
+        strip.text = element_text(size = 14), axis.title = element_text(size = 14), legend.position = 'right')
+
+
+
+
+
+
+# ------------------------------ forests
+
+#deviance explained
+
+expl_dev_for_long <- data.frame(Expl_dev = as.vector(expl_dev_for),
+                                ECO_NM = rownames(expl_dev_for),
+                                Period = rep(colnames(expl_dev_for), each = nrow(expl_dev_for)))
+
+#order ecoregions so that those included in both grass and for sets appear first
+expl_dev_for_long$ECO_NM <- factor(expl_dev_for_long$ECO_NM, levels = c(sort(ecor_union_nm), sort(ecor_unq_for_nm)))
+
+expl_dev_for_plot <- ggplot(data = expl_dev_for_long, aes(x = ECO_NM, y = Expl_dev, fill = Period)) +
+  geom_col(position = position_dodge2(width = .5)) +
+  scale_fill_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
+  geom_hline(yintercept = 5, colour = 'orange', linetype = 'dashed', lwd = 1.2) +
+  ylab('Explained deviance (%)') + xlab(NULL) + ggtitle('Forest') +
+  theme_pubr() +
+  theme(axis.text.x.bottom = element_text(angle = 45, hjust = 1, vjust = 1, size = 14),
+        axis.text.y.left = element_text(size = 14), axis.title.y = element_text(size = 16),
+        legend.text = element_text(size = 16), legend.title = element_text(size = 16), legend.position = 'bottom',
+        title = element_text(size = 18))
+
+
+
+
+
+
+# ------------------------------ combined grasslands and forests
+
+
+expl_dev_combined <- ggarrange(expl_dev_grass_plot, expl_dev_for_plot, nrow = 2, common.legend = T, legend = 'right')
 
 
 
