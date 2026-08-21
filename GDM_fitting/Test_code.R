@@ -184,9 +184,26 @@ test_ispl_obj_v2 <- reformat_ispl_obj(x = test_gdm_obj, eco_nm = 'ItaScl_sdf', p
 identical(test_ispl_obj, test_ispl_obj_v2) #TRUE
 
 
+# ---------------- scaling iSplines by their max estimated value for each predictor
 
+to_del_ispl <- isplines_grass$Alps_cmf
 
+to_del_max_ispl <- tapply(to_del_ispl$Values_y, INDEX = list(to_del_ispl$Variable_x), max)
 
+to_del_ispl$max_y_val <- unname(to_del_max_ispl[to_del_ispl$Variable_x])
+
+to_del_ispl$Scaled_values_y <- to_del_ispl$Values_y/to_del_ispl$max_y_val
+
+all.equal(to_del_ispl[to_del_ispl$Variable_x == 'Geographic', 'Values_y']/to_del_max_ispl[['Geographic']],
+          as.double(to_del_ispl[to_del_ispl$Variable_x == 'Geographic', 'Scaled_values_y'])) #TRUE
+
+plot(to_del_ispl[to_del_ispl$Variable_x == 'Geographic', 'Values_y']/to_del_max_ispl[['Geographic']],
+          to_del_ispl[to_del_ispl$Variable_x == 'Geographic', 'Scaled_values_y'])
+
+all.equal(to_del_ispl[to_del_ispl$Variable_x == 'Tavg', 'Values_y']/to_del_max_ispl[['Tavg']],
+          as.double(to_del_ispl[to_del_ispl$Variable_x == 'Tavg', 'Scaled_values_y'])) #TRUE
+
+rm(to_del_ispl, to_del_max_ispl)
 
 
 
