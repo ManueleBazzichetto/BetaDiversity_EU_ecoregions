@@ -91,11 +91,19 @@ rm(cl_hum_part_grass_prd1, cl_hum_part_grass_prd2)
 #add data on ecor position along elev, long and lat gradients
 cl_hum_part_grass <- dplyr::left_join(x = cl_hum_part_grass, y = lon_lat_alt_grass, by = 'ECO_NM')
 
-##FROM HERE!! Exclude ecoregions for which explained deviance was never equal to or larger than 5%
-#and re-code the ordering of ecoregions along gradients.
+#exclude ecoregions with explained deviance never equal to or larger than 5
+which(rowSums((expl_dev_grass >= 5)*1) == 0) #EuAtl_mf
+
+#exclude EuAtl_mf from cl_hum_part_grass
+cl_hum_part_grass <- cl_hum_part_grass[cl_hum_part_grass$ECO_NM != 'EuAtl_mf', ]
+
+#re-code columns with ecoregion position along elev, long and lat gradients
+cl_hum_part_grass$X_ord <- as.numeric(as.factor(cl_hum_part_grass$X_ord))
+cl_hum_part_grass$Y_ord <- as.numeric(as.factor(cl_hum_part_grass$Y_ord))
+cl_hum_part_grass$Alt_ord <- as.numeric(as.factor(cl_hum_part_grass$Alt_ord))
 
 
-ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
+cl_hum_grass_alt_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
   geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
   geom_point(aes(colour = Alt_ord), size = 8, alpha = .6) +
   geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
@@ -103,15 +111,76 @@ ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2
   scale_color_viridis_c(name = 'Elevation',
                         breaks = c(min(cl_hum_part_grass$Alt_ord), max(cl_hum_part_grass$Alt_ord)),
                         labels = c('Low elevation', 'High elevation'), option = 'plasma') +
-  ylab('Explained deviance - Period2 (%)') + xlab('Explained deviance - Period1 (%)') +
+  xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
   ggtitle('Grassland - Elevation') +
-  facet_wrap(~ VARIABLE_SET) +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
   theme_pubr() +
   theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
-        strip.text = element_text(size = 14), axis.title = element_text(size = 14), legend.position = 'right')
+        strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
 
 
+cl_hum_grass_long_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
+  geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
+  geom_point(aes(colour = X_ord), size = 8, alpha = .6) +
+  geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
+                  box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
+  scale_color_viridis_c(name = 'Longitude',
+                        breaks = c(min(cl_hum_part_grass$X_ord), max(cl_hum_part_grass$X_ord)),
+                        labels = c('Westward', 'Eastward')) +
+  xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  ggtitle('Grassland - Longitude') +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  theme_pubr() +
+  theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
+        strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
 
+
+cl_hum_grass_lat_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
+  geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
+  geom_point(aes(colour = Y_ord), size = 8, alpha = .6) +
+  geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
+                  box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
+  scale_color_viridis_c(name = 'Latitude',
+                        breaks = c(min(cl_hum_part_grass$Y_ord), max(cl_hum_part_grass$Y_ord)),
+                        labels = c('Southward', 'Northward'), option = 'mako') +
+  xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  ggtitle('Grassland - Latitude') +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  theme_pubr() +
+  theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
+        strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
+
+
+# ------ warping functions
+
+#for each variable, scale estimated splines value by their corresponding maximum
+
+isplines_grass_dtf <- do.call(rbind, lapply(isplines_grass, function(dtf) {
+  
+  #compute max value of estimated spline for each variable
+  max_ispl <- tapply(dtf[['Values_y']], INDEX = list(dtf[['Variable_x']]), max)
+  
+  #add column with max estimated value of isplines
+  dtf[['Max_y_value']] <- as.double(unname(max_ispl[dtf[['Variable_x']]]))
+  
+  #add column with scaled values of estimated splines
+  dtf[['Scaled_y_values']] <- dtf[['Values_y']]/dtf[['Max_y_value']]
+  
+  #return result
+  return(dtf)
+  
+}))
+
+#modify row names
+row.names(isplines_grass_dtf) <- as.character(seq_len(nrow(isplines_grass_dtf)))
+
+##FROM HERE!!!!!! COMPLETE PLOT BELOW
+
+ggplot(isplines_grass_dtf, aes(x = Values_x, y = Scaled_y_values, group = Period, col = Period)) +
+  geom_line(lwd = 1.5) +
+  scale_color_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
+  facet_grid(ECO_NM ~ Variable_x, scales = 'free') +
+  theme_pubr()
 
 
 
@@ -142,11 +211,11 @@ expl_dev_for_plot <- ggplot(data = expl_dev_for_long, aes(x = ECO_NM, y = Expl_d
 
 
 
-# ------------------------------ combined grasslands and forests
+# ------------------------------ combined grasslands and forests plots
 
 
 expl_dev_combined <- ggarrange(expl_dev_grass_plot, expl_dev_for_plot, nrow = 2, common.legend = T, legend = 'right')
 
-
+ggarrange(cl_hum_grass_long_plot, cl_hum_grass_lat_plot, cl_hum_grass_alt_plot, nrow = 3, ncol = 1)
 
 
