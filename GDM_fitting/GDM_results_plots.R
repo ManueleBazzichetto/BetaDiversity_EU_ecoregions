@@ -174,15 +174,52 @@ isplines_grass_dtf <- do.call(rbind, lapply(isplines_grass, function(dtf) {
 #modify row names
 row.names(isplines_grass_dtf) <- as.character(seq_len(nrow(isplines_grass_dtf)))
 
-##FROM HERE!!!!!! COMPLETE PLOT BELOW
+#scale geographic distance to express it in km (rather than meters)
+isplines_grass_dtf[isplines_grass_dtf$Variable_x == 'Geographic', 'Values_x'] <- isplines_grass_dtf[isplines_grass_dtf$Variable_x == 'Geographic', 'Values_x']/1000 
 
-ggplot(isplines_grass_dtf, aes(x = Values_x, y = Scaled_y_values, group = Period, col = Period)) +
+#create two plots: one including climate and hmi and another for the other predictors
+
+# -- climate and hmi
+isplines_grass_cl_hmi_dtf <- isplines_grass_dtf[isplines_grass_dtf$Variable_x %in% c('Tavg', 'Prcp', 'Hmi_value'), ]
+
+#re-order levels of Variable_x
+isplines_grass_cl_hmi_dtf$Variable_x <- factor(isplines_grass_cl_hmi_dtf$Variable_x, levels = c('Tavg', 'Prcp', 'Hmi_value'))
+
+#Tavg, Prcp, Hmi_value
+wfuncs_cl_hmi_grass_plot <- ggplot(isplines_grass_cl_hmi_dtf, aes(x = Values_x, y = Scaled_y_values, group = Period, col = Period)) +
   geom_line(lwd = 1.5) +
   scale_color_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
-  facet_grid(ECO_NM ~ Variable_x, scales = 'free') +
-  theme_pubr()
+  facet_grid(ECO_NM ~ Variable_x, scales = 'free',
+             labeller = labeller(Variable_x = c('Tavg' = 'Temperature (C°)',
+                                                'Prcp' = 'Precipitation (mm)',
+                                                'Hmi_value' = 'Land use'))) +
+  ylab('Partial ecological distance (scaled)') + xlab(NULL) + ggtitle('Grassland') +
+  theme_pubr() +
+  theme(legend.text = element_text(size = 16), legend.title = element_text(size = 18),
+        axis.title.y = element_text(size = 16), strip.text.y.right = element_text(size = 14),
+        strip.text.x.top = element_text(size = 16), legend.position = 'bottom', plot.title = element_text(size = 20))
 
+ggsave(plot = wfuncs_cl_hmi_grass_plot, filename = 'Results_figs/Warping_functions_cl_hmi_grass.jpeg', device = 'jpeg',
+       width = 26, height = 30, units = 'cm', dpi = 300)
 
+# -- remaining predictors
+isplines_grass_rem_dtf <- isplines_grass_dtf[!isplines_grass_dtf$Variable_x %in% c('Tavg', 'Prcp', 'Hmi_value'), ]
+
+wfuncs_rem_grass_plot <- ggplot(isplines_grass_rem_dtf, aes(x = Values_x, y = Scaled_y_values, group = Period, col = Period)) +
+  geom_line(lwd = 1.5) +
+  scale_color_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
+  facet_grid(ECO_NM ~ Variable_x, scales = 'free',
+             labeller = labeller(Variable_x = c('Geographic' = 'Geo. distance (km)',
+                                                'Releve_area_m2' = 'Plot size (m^2)',
+                                                'Roughness' = 'Topo. roughness'))) +
+  ylab('Partial ecological distance (scaled)') + xlab(NULL) + ggtitle('Grassland') +
+  theme_pubr() +
+  theme(legend.text = element_text(size = 16), legend.title = element_text(size = 18),
+        axis.title.y = element_text(size = 16), strip.text.y.right = element_text(size = 14),
+        strip.text.x.top = element_text(size = 16), legend.position = 'bottom', plot.title = element_text(size = 20))
+
+ggsave(plot = wfuncs_rem_grass_plot, filename = 'Results_figs/Warping_functions_rem_grass.jpeg', device = 'jpeg',
+       width = 26, height = 30, units = 'cm', dpi = 300)
 
 # ------------------------------ forests
 
@@ -207,8 +244,169 @@ expl_dev_for_plot <- ggplot(data = expl_dev_for_long, aes(x = ECO_NM, y = Expl_d
         title = element_text(size = 18))
 
 
+# ------ deviance partitions
+
+class(dev_part_for$VARIABLE_SET) #chr
+unique(dev_part_for$VARIABLE_SET)
+
+#consider unique contribution of climate and human
+cl_hum_part_for <- dev_part_for[dev_part_for$VARIABLE_SET %in% c('climate alone', 'human alone'), ]
+
+#reformat to have separate fields for Period1 and Period2
+cl_hum_part_for_prd1 <- cl_hum_part_for[cl_hum_part_for$Period == 'Period1', ]
+cl_hum_part_for_prd2 <- cl_hum_part_for[cl_hum_part_for$Period == 'Period2', ]
+
+#check fields match
+identical(cl_hum_part_for_prd1$ECO_NM, cl_hum_part_for_prd2$ECO_NM) #T
+identical(cl_hum_part_for_prd1$VARIABLE_SET, cl_hum_part_for_prd2$VARIABLE_SET) #T
+
+#modify columns for period-specific quantities
+colnames(cl_hum_part_for_prd1)[c(2, 3)] <- paste(colnames(cl_hum_part_for_prd1)[c(2, 3)], 'Prd1', sep = '_')
+colnames(cl_hum_part_for_prd2)[c(2, 3)] <- paste(colnames(cl_hum_part_for_prd2)[c(2, 3)], 'Prd2', sep = '_')
+
+#cbind data.frames
+cl_hum_part_for <- cbind(cl_hum_part_for_prd1[c('ECO_NM', 'VARIABLE_SET', 'DEVIANCE_Prd1', 'DEVIANCE_scaled_Prd1')],
+                         cl_hum_part_for_prd2[c('DEVIANCE_Prd2', 'DEVIANCE_scaled_Prd2')])
+
+#rm period-specific datasets
+rm(cl_hum_part_for_prd1, cl_hum_part_for_prd2)
+
+#add data on ecor position along elev, long and lat gradients
+cl_hum_part_for <- dplyr::left_join(x = cl_hum_part_for, y = lon_lat_alt_for, by = 'ECO_NM')
+
+#exclude ecor with dev expl never equal to or greater than 5%
+which(rowSums((expl_dev_for >= 5)*1) == 0) #EuAtl_mf
+
+#exclude EuAtl_mf from cl_hum_part_for
+cl_hum_part_for <- cl_hum_part_for[cl_hum_part_for$ECO_NM != 'EuAtl_mf', ]
+
+#re-code columns with ecoregion position along elev, long and lat gradients
+cl_hum_part_for$X_ord <- as.numeric(as.factor(cl_hum_part_for$X_ord))
+cl_hum_part_for$Y_ord <- as.numeric(as.factor(cl_hum_part_for$Y_ord))
+cl_hum_part_for$Alt_ord <- as.numeric(as.factor(cl_hum_part_for$Alt_ord))
 
 
+cl_hum_for_alt_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
+  geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
+  geom_point(aes(colour = Alt_ord), size = 8, alpha = .6) +
+  geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
+                  box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
+  scale_color_viridis_c(name = 'Elevation',
+                        breaks = c(min(cl_hum_part_for$Alt_ord), max(cl_hum_part_for$Alt_ord)),
+                        labels = c('Low elevation', 'High elevation'), option = 'plasma') +
+  xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  ggtitle('Forest - Elevation') +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  theme_pubr() +
+  theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
+        strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
+
+
+cl_hum_for_long_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
+  geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
+  geom_point(aes(colour = X_ord), size = 8, alpha = .6) +
+  geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
+                  box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
+  scale_color_viridis_c(name = 'Longitude',
+                        breaks = c(min(cl_hum_part_for$X_ord), max(cl_hum_part_for$X_ord)),
+                        labels = c('Westward', 'Eastward')) +
+  xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  ggtitle('Forest - Longitude') +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  theme_pubr() +
+  theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
+        strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
+
+
+
+cl_hum_for_lat_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
+  geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
+  geom_point(aes(colour = Y_ord), size = 8, alpha = .6) +
+  geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
+                  box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
+  scale_color_viridis_c(name = 'Latitude',
+                        breaks = c(min(cl_hum_part_for$Y_ord), max(cl_hum_part_for$Y_ord)),
+                        labels = c('Southward', 'Northward'), option = 'mako') +
+  xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  ggtitle('Forest - Latitude') +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  theme_pubr() +
+  theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
+        strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
+
+
+# ------ warping functions
+
+#scale estimated splines' value by their max
+isplines_for_dtf <- do.call(rbind, lapply(isplines_for, function(dtf) {
+  
+  #compute max estimated ispline value
+  max_ispl <- tapply(dtf[['Values_y']], INDEX = list(dtf[['Variable_x']]), max)
+  
+  #add field with max estimated value
+  dtf[['Max_y_value']] <- as.double(unname(max_ispl[dtf[['Variable_x']]]))
+  
+  #add column with scaled values of estimated splines
+  dtf[['Scaled_y_values']] <- dtf[['Values_y']]/dtf[['Max_y_value']]
+  
+  #return result
+  return(dtf)
+  
+  }))
+
+
+#modify row.names
+row.names(isplines_for_dtf) <- as.character(seq_len(nrow(isplines_for_dtf)))
+
+#scale geographic distance to express it in km
+isplines_for_dtf[isplines_for_dtf$Variable_x == 'Geographic', 'Values_x'] <- isplines_for_dtf[isplines_for_dtf$Variable_x == 'Geographic', 'Values_x']/1000
+
+
+#create two plots: one including climate and hmi and another for the remaining predictors
+
+# -- climate and hmi
+
+isplines_for_cl_hmi_dtf <- isplines_for_dtf[isplines_for_dtf$Variable_x %in% c('Tavg', 'Prcp', 'Hmi_value'), ]
+
+#re-order levels of Variable_x
+isplines_for_cl_hmi_dtf$Variable_x <- factor(isplines_for_cl_hmi_dtf$Variable_x, levels = c('Tavg', 'Prcp', 'Hmi_value'))
+
+#Tavg, Prcp, Hmi_value
+wfuncs_cl_hmi_for_plot <- ggplot(isplines_for_cl_hmi_dtf, aes(x = Values_x, y = Scaled_y_values, group = Period, col = Period)) +
+  geom_line(lwd = 1.5) +
+  scale_color_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
+  facet_grid(ECO_NM ~ Variable_x, scales = 'free', labeller = labeller(Variable_x = c('Tavg' = 'Temperature (C°)',
+                                                                                      'Prcp' = 'Precipitation (mm)',
+                                                                                      'Hmi_value' = 'Land use'))) +
+  ylab('Partial ecological distance (scaled)') + xlab(NULL) + ggtitle('Forest') +
+  theme_pubr() +
+  theme(legend.text = element_text(size = 16), legend.title = element_text(size = 18), axis.title.y = element_text(size = 16),
+        strip.text.y.right = element_text(size = 14), strip.text.x.top = element_text(size = 16),
+        legend.position = 'bottom', plot.title = element_text(size = 20))
+
+
+ggsave(plot = wfuncs_cl_hmi_for_plot, filename = 'Results_figs/Warping_functions_cl_hmi_for.jpeg', device = 'jpeg',
+       width = 26, height = 30, units = 'cm', dpi = 300)
+
+
+# -- remaining predictors
+
+isplines_for_rem_dtf <- isplines_for_dtf[!isplines_for_dtf$Variable_x %in% c('Tavg', 'Prcp', 'Hmi_value'), ]
+
+wfuncs_rem_for_plot <- ggplot(isplines_for_rem_dtf, aes(x = Values_x, y = Scaled_y_values, group = Period, col = Period)) +
+  geom_line(lwd = 1.5) +
+  scale_color_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
+  facet_grid(ECO_NM ~ Variable_x, scales = 'free', labeller = labeller(Variable_x = c('Geographic' = 'Geo. distance (km)',
+                                                                                      'Releve_area_m2' = 'Plot size (m^2)',
+                                                                                      'Roughness' = 'Topo. roughness'))) +
+  ylab('Partial ecological distance (scaled)') + xlab(NULL) + ggtitle('Forest') +
+  theme_pubr() +
+  theme(legend.text = element_text(size = 16), legend.title = element_text(size = 18), axis.title.y = element_text(size = 16),
+        strip.text.y.right = element_text(size = 14), strip.text.x.top = element_text(size = 16),
+        legend.position = 'bottom', plot.title = element_text(size = 20))
+
+ggsave(plot = wfuncs_rem_for_plot, filename = 'Results_figs/Warping_functions_rem_for.jpeg', device = 'jpeg',
+       width = 26, height = 30, units = 'cm', dpi = 300)
 
 
 # ------------------------------ combined grasslands and forests plots
@@ -216,6 +414,17 @@ expl_dev_for_plot <- ggplot(data = expl_dev_for_long, aes(x = ECO_NM, y = Expl_d
 
 expl_dev_combined <- ggarrange(expl_dev_grass_plot, expl_dev_for_plot, nrow = 2, common.legend = T, legend = 'right')
 
-ggarrange(cl_hum_grass_long_plot, cl_hum_grass_lat_plot, cl_hum_grass_alt_plot, nrow = 3, ncol = 1)
+ggsave('Results_figs/Explained_dev_for_grass.jpeg', plot = expl_dev_combined, device = 'jpeg', dpi = 300,
+       units = 'cm', width = 20, height = 15)
 
+
+lon_lat_elev_grass_plot <- ggarrange(cl_hum_grass_long_plot, cl_hum_grass_lat_plot, cl_hum_grass_alt_plot, nrow = 3, ncol = 1)
+
+ggsave('Results_figs/Dev_part_cl_hmi_grass.jpeg', plot = lon_lat_elev_grass_plot, device = 'jpeg', dpi = 300,
+       units = 'cm', width = 26, height = 34)
+
+lon_lat_elev_for_plot <- ggarrange(cl_hum_for_long_plot, cl_hum_for_lat_plot, cl_hum_for_alt_plot, nrow = 3, ncol = 1)
+
+ggsave('Results_figs/Dev_part_cl_hmi_for.jpeg', plot = lon_lat_elev_for_plot, device = 'jpeg', dpi = 300,
+       units = 'cm', width = 26, height = 34)
 
