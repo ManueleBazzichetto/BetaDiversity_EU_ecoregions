@@ -146,11 +146,20 @@ for(ecor_nm in ecor_grass_nm) {
   }
 
 
+#check number of plots - this looks fine
+Num_plots_grass <- do.call(rbind, lapply(summary_grass, function(ecor_out) ecor_out[['N_plots']]))
 
 
 
+# ------------- forests
 
+#rm all objects in the env, but summary_grass
 
+obj_in_env <- ls()
+
+obj_in_env <- c(obj_in_env[obj_in_env != 'summary_grass'], 'obj_in_env')
+
+rm(list = obj_in_env)
 
 
 
