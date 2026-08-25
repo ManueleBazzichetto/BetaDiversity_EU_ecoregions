@@ -21,7 +21,7 @@ rm(list = ls())
 #create object including path to tables formatted for dd-analysis
 path_to_grass_tables <- '/MOTIVATE/GDM_EuropeanEcoregions/Data_for_analyses/tables_for_ddmodels_grassland/'
 
-#retrieve object names of tables formatted for GDMs
+#retrieve object names of tables formatted for dd-analysis
 ecor_grass_obj <- list.files(path = path_to_grass_tables, pattern = '_ddmod_grass.RData', full.names = F)
 
 #extract ecoregion names
@@ -160,6 +160,26 @@ obj_in_env <- ls()
 obj_in_env <- c(obj_in_env[obj_in_env != 'summary_grass'], 'obj_in_env')
 
 rm(list = obj_in_env)
+
+
+#create object including path to tables formatted for dd-analysis
+path_to_for_tables <- '/MOTIVATE/GDM_EuropeanEcoregions/Data_for_analyses/tables_for_ddmodels_forest/'
+
+#retrieve object names of tables formatted for dd-analysis
+ecor_for_obj <- list.files(path = path_to_for_tables, pattern = '_ddmod_forest.RData', full.names = F)
+
+#extract ecoregion names
+ecor_for_nm <- sapply(strsplit(x = ecor_for_obj, split = '_', fixed = T), function(i) paste(i[1], i[2], sep = '_'))
+
+#create an empty list that will store summaries computed across different settings
+#also name the list according to object names
+summary_for <- vector(mode = 'list', length = length(ecor_for_nm))
+
+names(summary_for) <- ecor_for_nm
+
+##FROM HERE!!!!!!!!!
+
+
 
 
 
