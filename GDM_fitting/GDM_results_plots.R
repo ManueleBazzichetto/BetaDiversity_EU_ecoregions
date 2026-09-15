@@ -105,13 +105,14 @@ cl_hum_part_grass$Alt_ord <- as.numeric(as.factor(cl_hum_part_grass$Alt_ord))
 
 cl_hum_grass_alt_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
   geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
-  geom_point(aes(colour = Alt_ord), size = 8, alpha = .6) +
+  geom_point(aes(colour = Alt_ord), size = 6, alpha = .6) +
   geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
                   box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
   scale_color_viridis_c(name = 'Elevation',
                         breaks = c(min(cl_hum_part_grass$Alt_ord), max(cl_hum_part_grass$Alt_ord)),
                         labels = c('Low elevation', 'High elevation'), option = 'plasma') +
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Grassland - Elevation') +
   facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
   theme_pubr() +
@@ -121,13 +122,14 @@ cl_hum_grass_alt_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1,
 
 cl_hum_grass_long_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
   geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
-  geom_point(aes(colour = X_ord), size = 8, alpha = .6) +
+  geom_point(aes(colour = X_ord), size = 6, alpha = .6) +
   geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
                   box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
   scale_color_viridis_c(name = 'Longitude',
                         breaks = c(min(cl_hum_part_grass$X_ord), max(cl_hum_part_grass$X_ord)),
                         labels = c('Westward', 'Eastward')) +
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Grassland - Longitude') +
   facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
   theme_pubr() +
@@ -137,13 +139,14 @@ cl_hum_grass_long_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1
 
 cl_hum_grass_lat_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
   geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
-  geom_point(aes(colour = Y_ord), size = 8, alpha = .6) +
+  geom_point(aes(colour = Y_ord), size = 6, alpha = .6) +
   geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
                   box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
   scale_color_viridis_c(name = 'Latitude',
                         breaks = c(min(cl_hum_part_grass$Y_ord), max(cl_hum_part_grass$Y_ord)),
                         labels = c('Southward', 'Northward'), option = 'mako') +
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Grassland - Latitude') +
   facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
   theme_pubr() +
@@ -288,13 +291,14 @@ cl_hum_part_for$Alt_ord <- as.numeric(as.factor(cl_hum_part_for$Alt_ord))
 
 cl_hum_for_alt_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
   geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
-  geom_point(aes(colour = Alt_ord), size = 8, alpha = .6) +
+  geom_point(aes(colour = Alt_ord), size = 6, alpha = .6) +
   geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
                   box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
   scale_color_viridis_c(name = 'Elevation',
                         breaks = c(min(cl_hum_part_for$Alt_ord), max(cl_hum_part_for$Alt_ord)),
                         labels = c('Low elevation', 'High elevation'), option = 'plasma') +
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Forest - Elevation') +
   facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
   theme_pubr() +
@@ -304,13 +308,14 @@ cl_hum_for_alt_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y =
 
 cl_hum_for_long_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
   geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
-  geom_point(aes(colour = X_ord), size = 8, alpha = .6) +
+  geom_point(aes(colour = X_ord), size = 6, alpha = .6) +
   geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
                   box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
   scale_color_viridis_c(name = 'Longitude',
                         breaks = c(min(cl_hum_part_for$X_ord), max(cl_hum_part_for$X_ord)),
                         labels = c('Westward', 'Eastward')) +
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Forest - Longitude') +
   facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
   theme_pubr() +
@@ -321,13 +326,14 @@ cl_hum_for_long_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y 
 
 cl_hum_for_lat_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y = DEVIANCE_scaled_Prd2)) +
   geom_abline(slope = 1, intercept = 0, colour = 'grey', lty = 'dashed') +
-  geom_point(aes(colour = Y_ord), size = 8, alpha = .6) +
+  geom_point(aes(colour = Y_ord), size = 6, alpha = .6) +
   geom_text_repel(aes(label = ECO_NM, size = 2), max.overlaps = Inf,
                   box.padding = .8, show.legend = FALSE, alpha = .8, segment.alpha = 0.6) +
   scale_color_viridis_c(name = 'Latitude',
                         breaks = c(min(cl_hum_part_for$Y_ord), max(cl_hum_part_for$Y_ord)),
                         labels = c('Southward', 'Northward'), option = 'mako') +
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
+  xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Forest - Latitude') +
   facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
   theme_pubr() +
