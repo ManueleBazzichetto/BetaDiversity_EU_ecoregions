@@ -3,7 +3,9 @@
 
 library(ggplot2)
 library(ggpubr)
-
+#packages to save tables
+library(flextable) #installed on 17 Sept 2026
+#library(officer) #installed on 17 Sept 2026
 
 # -- objects used in plots
 
@@ -57,6 +59,34 @@ period_summ_grass_plot <- ggplot(Period_summ_grass, aes(x = Index, y = Median, c
         legend.text = element_text(size = 16), legend.title = element_text(size = 16),
         axis.text.x.bottom = element_text(size = 14, angle = 45, vjust = 1, hjust = 1))
 
+
+#create and save table of summary stats
+
+#exclude column including mean values
+#transform the table to wide format (needed for creating period-specific fields)
+tab_prd_summ_grass <- as.data.frame(tidyr::pivot_wider(data = Period_summ_grass[setdiff(colnames(Period_summ_grass), 'Mean')], names_from = Period,
+                                         values_from = c(Median, fst_qrt, trd_qrt), id_cols = c(ECO_NM, Index)))
+
+#rename quartiles' columns
+colnames(tab_prd_summ_grass)[c(1, 5, 6, 7, 8)] <- c('Ecoregion', 'Q1_Period1', 'Q1_Period2', 'Q3_Period1', 'Q3_Period2')
+#transform to a flextable obj
+tab_prd_summ_grass <- flextable(tab_prd_summ_grass)
+#round values to 2nd digit
+tab_prd_summ_grass <- colformat_double(tab_prd_summ_grass, digits = 2)
+#create sub-header for Period1 and Period2
+tab_prd_summ_grass <- separate_header(tab_prd_summ_grass)
+#bold header
+tab_prd_summ_grass <- bold(tab_prd_summ_grass, bold = TRUE, part = 'header')
+#re-size header
+tab_prd_summ_grass <- fontsize(tab_prd_summ_grass, part = 'header', size = 12)
+#cell merging
+tab_prd_summ_grass <- merge_v(tab_prd_summ_grass, j = ~ Ecoregion)
+#add bottom borders to each row of the body
+tab_prd_summ_grass <- border_inner_h(tab_prd_summ_grass, border = fp_border(color="gray", width = 1), part = 'body')
+#autofit for a nicer layout
+tab_prd_summ_grass <- set_table_properties(x = tab_prd_summ_grass, layout = 'autofit', width = 1)
+#save output
+save_as_docx(tab_prd_summ_grass, path = 'Results_tabs/Period_sum_grass_tab.docx')
 
 
 # ---- Distribution of geographic distances
@@ -161,6 +191,34 @@ period_summ_for_plot <- ggplot(Period_summ_for, aes(x = Index, y = Median, col =
   theme(title = element_text(size = 18), strip.text = element_text(size = 16),
         legend.text = element_text(size = 16), legend.title = element_text(size = 16),
         axis.text.x.bottom = element_text(size = 14, angle = 45, vjust = 1, hjust = 1))
+
+
+#create and save table of summary stats
+
+tab_prd_summ_for <- as.data.frame(tidyr::pivot_wider(data = Period_summ_for[setdiff(colnames(Period_summ_for), 'Mean')],
+                                                     id_cols = c(ECO_NM, Index), names_from = Period,
+                                                     values_from = c(Median, fst_qrt, trd_qrt)))
+#rename cols
+colnames(tab_prd_summ_for)[c(1, 5, 6, 7, 8)] <- c('Ecoregion', 'Q1_Period1', 'Q1_Period2', 'Q3_Period1', 'Q3_Period2')
+#trnsf to flextable obj
+tab_prd_summ_for <- flextable(tab_prd_summ_for)
+#round values to 2nd digit
+tab_prd_summ_for <- colformat_double(tab_prd_summ_for, digits = 2)
+#create sub-header for Period1 and 2
+tab_prd_summ_for <- separate_header(tab_prd_summ_for)
+#bold header
+tab_prd_summ_for <- bold(tab_prd_summ_for, bold = TRUE, part = 'header')
+#re-size font
+tab_prd_summ_for <- fontsize(tab_prd_summ_for, size = 12, part = 'header')
+#merge cells
+tab_prd_summ_for <- merge_v(tab_prd_summ_for, j = ~ Ecoregion)
+#add bottom borders to body
+tab_prd_summ_for <- border_inner_h(tab_prd_summ_for, border = fp_border(color="gray", width = 1), part = 'body')
+#autofit for a nicer layout
+tab_prd_summ_for <- set_table_properties(tab_prd_summ_for, layout = 'autofit', width = 1)
+#save output
+save_as_docx(tab_prd_summ_for, path = 'Results_tabs/Period_sum_for_tab.docx')
+
 
 
 # ---- Distribution of geographic distances
