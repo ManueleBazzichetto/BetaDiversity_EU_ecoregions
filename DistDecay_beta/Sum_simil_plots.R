@@ -290,6 +290,29 @@ ggsave(filename = 'Results_figs/Period_dist_summary_for.jpeg', plot = period_dis
        width = 34, height = 28, units = 'cm', dpi = 300)
 
 
+#create another plot that uses the same range of the y-axis than the plot for grassland data
+
+#extract y range of grassland plot
+round(layer_scales(period_dist_summ_grass_plot)$y$range$range, digits = 2) #0 - 0.31
+
+period_dist_summ_for_plot_zoom <- ggplot(Period_dist_summ_for, aes(x = Geo_bins, y = Median, col = Period, group = Period)) +
+  geom_line(lwd = 1.2) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
+  scale_x_discrete(breaks = function(x) x[seq(1, length(x), by = 2)]) + #plot every second label on the x-axis ticks
+  facet_grid(Index ~ ECO_NM, scales = 'free_x') +
+  ylab('Median similarity') + xlab(NULL) + ggtitle('Forest') +
+  ylim(c(0, 0.31)) +
+  theme_pubclean() +
+  theme(title = element_text(size = 18), strip.text = element_text(size = 16),
+        legend.text = element_text(size = 16), legend.title = element_text(size = 16),
+        axis.text.x.bottom = element_text(size = 9, angle = 45, vjust = 1, hjust = 1), 
+        strip.background = element_blank())
+
+ggsave(filename = 'Results_figs/Period_dist_summary_for_zoom.jpeg', plot = period_dist_summ_for_plot_zoom, device = 'jpeg',
+       width = 34, height = 28, units = 'cm', dpi = 300)
+
+
 # ------------------ combine grassland and forest plots
 
 
