@@ -203,7 +203,7 @@ wfuncs_cl_hmi_grass_plot <- ggplot(isplines_grass_cl_hmi_dtf, aes(x = Values_x, 
         strip.text.x.top = element_text(size = 16), legend.position = 'bottom', plot.title = element_text(size = 20))
 
 ggsave(plot = wfuncs_cl_hmi_grass_plot, filename = 'Results_figs/Warping_functions_cl_hmi_grass.jpeg', device = 'jpeg',
-       width = 26, height = 30, units = 'cm', dpi = 300)
+       width = 26, height = 32, units = 'cm', dpi = 300)
 
 # -- remaining predictors
 isplines_grass_rem_dtf <- isplines_grass_dtf[!isplines_grass_dtf$Variable_x %in% c('Tavg', 'Prcp', 'Hmi_value'), ]
@@ -222,7 +222,7 @@ wfuncs_rem_grass_plot <- ggplot(isplines_grass_rem_dtf, aes(x = Values_x, y = Sc
         strip.text.x.top = element_text(size = 16), legend.position = 'bottom', plot.title = element_text(size = 20))
 
 ggsave(plot = wfuncs_rem_grass_plot, filename = 'Results_figs/Warping_functions_rem_grass.jpeg', device = 'jpeg',
-       width = 26, height = 30, units = 'cm', dpi = 300)
+       width = 26, height = 32, units = 'cm', dpi = 300)
 
 # ------------------------------ forests
 
@@ -392,7 +392,7 @@ wfuncs_cl_hmi_for_plot <- ggplot(isplines_for_cl_hmi_dtf, aes(x = Values_x, y = 
 
 
 ggsave(plot = wfuncs_cl_hmi_for_plot, filename = 'Results_figs/Warping_functions_cl_hmi_for.jpeg', device = 'jpeg',
-       width = 26, height = 30, units = 'cm', dpi = 300)
+       width = 26, height = 32, units = 'cm', dpi = 300)
 
 
 # -- remaining predictors
@@ -412,7 +412,7 @@ wfuncs_rem_for_plot <- ggplot(isplines_for_rem_dtf, aes(x = Values_x, y = Scaled
         legend.position = 'bottom', plot.title = element_text(size = 20))
 
 ggsave(plot = wfuncs_rem_for_plot, filename = 'Results_figs/Warping_functions_rem_for.jpeg', device = 'jpeg',
-       width = 26, height = 30, units = 'cm', dpi = 300)
+       width = 26, height = 32, units = 'cm', dpi = 300)
 
 
 # ------------------------------ combined grasslands and forests plots
