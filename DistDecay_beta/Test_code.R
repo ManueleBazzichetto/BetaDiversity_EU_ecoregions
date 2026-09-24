@@ -3,6 +3,10 @@
 
 library(data.table)
 library(ggplot2)
+library(glm2)
+
+
+# --------------- test code for computing summary statistics of similarity
 
 #import a table formatted for dd analysis: this appears as tmp_list in the environment
 load('/MOTIVATE/GDM_EuropeanEcoregions/Data_for_analyses/tables_for_ddmodels_forest/TyrAdr_smf_ddmod_forest.RData')
@@ -134,9 +138,122 @@ ggplot(period_dist_summary, aes(x = Geo_bins, y = Mean, group = Period, col = Pe
 
 
 
+# --------------- test code for fitting distance-decay models of similarity
+
+exists('tmp_list') #F
+
+#import a table formatted for dd analysis: this appears as tmp_list in the environment
+load('/MOTIVATE/GDM_EuropeanEcoregions/Data_for_analyses/tables_for_ddmodels_forest/TyrAdr_smf_ddmod_forest.RData')
+
+names(tmp_list) #"Period1" "Period2"
+head(tmp_list$Period1)
+
+#the idea is to fit distance-decay models of similarity, while also controlling for differences in plot size
+#similarity is computed in terms of 1 - dissimilarity index. For the dd-models, I am only considering Bray-Curtis
+#because the other indices behave qualitatively similar.
+
+#The Bray-Curtis index (bray column) must be transformed in its complement: 1 - bray
+#The geographic distance (euc_dist) is in meters, and it should be transformed in km (divide by 1000)
+#The absolute difference in plot size is right-skewed (most plot sizes are similar), and it should be sqrt-transformed
+#The 'Period' column is missing and must be added
+
+to_del_ddmod_table <- lapply(names(tmp_list), function(prd_nm) {
+  
+  #extract period-specific table
+  dtf <- tmp_list[[prd_nm]]
+  
+  #transform to data.table for speeding computations up - also exclude fields that won't be used for fitting the models
+  dtf <- as.data.table(dtf[c('bray', 'euc_dist', 'Abs_diff_plot_size')])
+  
+  #transform dissimilarity (bray) into similarity
+  dtf[, bray := (1 - bray)]
+  
+  #sqrt-transform Abs_diff_plot_size
+  dtf[, Abs_diff_plot_size_sqrt := sqrt(Abs_diff_plot_size)]
+  
+  #drop untransformed Abs_diff_plot_size
+  dtf[, Abs_diff_plot_size := NULL]
+  
+  #scale euc_dist (Euclidean distance in meters) to km
+  dtf[, euc_dist := euc_dist/1000]
+  
+  #add Period column
+  dtf[, Period := prd_nm]
+  
+  #return dtf
+  return(dtf)
+  
+  })
+
+#rbind the period-specific tables and transform to data.frame
+to_del_ddmod_table <- as.data.frame(rbindlist(to_del_ddmod_table))
+
+#check identity with object created w/o data.table
+
+to_del_ddmod_table2 <- do.call(rbind, lapply(names(tmp_list), function(prd_nm) {
+  
+  #extract period-specific table
+  dtf <- tmp_list[[prd_nm]]
+  
+  #transform to data.table for speeding computations up - also exclude fields that won't be used for fitting the models
+  dtf <- dtf[c('bray', 'euc_dist', 'Abs_diff_plot_size')]
+  
+  #transform dissimilarity (bray) into similarity
+  dtf$bray <- (1 - dtf$bray)
+  
+  #sqrt-transform Abs_diff_plot_size
+  dtf$Abs_diff_plot_size_sqrt <- sqrt(dtf$Abs_diff_plot_size)
+  
+  #drop untransformed Abs_diff_plot_size
+  dtf$Abs_diff_plot_size <- NULL
+  
+  #scale euc_dist (Euclidean distance in meters) to km
+  dtf$euc_dist <- dtf$euc_dist/1000
+  
+  #add Period column
+  dtf$Period <- prd_nm
+  
+  #return dtf
+  return(dtf)
+  
+  }))
+
+waldo::compare(to_del_ddmod_table, to_del_ddmod_table2)
+
+all(mapply(identical, x = to_del_ddmod_table, y = to_del_ddmod_table2)) #T
+
+rm(to_del_ddmod_table2)
+
+#fit the model
+
+to_del_mod_form <- as.formula('~ euc_dist*Period + Abs_diff_plot_size_sqrt')
+
+#first, create the design matrix
+
+#coerce Period to factor and order levels so that Period1 is the ref level
+to_del_ddmod_table$Period <- factor(to_del_ddmod_table$Period, levels = c('Period1', 'Period2'))
+
+to_del_des_mat <- model.matrix(object = to_del_mod_form, data = to_del_ddmod_table)
+
+#directly fit the model with glm2
+to_del_mod_obj <- try(glm.fit2(x = to_del_des_mat, y = to_del_ddmod_table$bray, family = binomial(link = 'log')), silent = TRUE)
+
+#extract distances at which evaluating partial effect of Period
+#the first distance is 1 km - no need to extract it from the tables
+#the second distance is the mean of period-specific median distances
+to_del_med_d <- round(mean(x = tapply(to_del_ddmod_table$euc_dist, INDEX = to_del_ddmod_table$Period, median)), digits = 2) #398 km
+#the third distance is the min of the period-specific max distances
+to_del_max_d <- round(min(tapply(to_del_ddmod_table$euc_dist, INDEX = to_del_ddmod_table$Period, max)), digits = 2)
+
+#extract quantities of interest from mod obj
+to_del_coefs <- coef(to_del_mod_obj)
+
+to_del_coef_combos <- c(Dist1 = to_del_coefs[['PeriodPeriod2']] + to_del_coefs[['euc_dist:PeriodPeriod2']],
+                        Dist2 = to_del_coefs[['PeriodPeriod2']] + to_del_coefs[['euc_dist:PeriodPeriod2']]*to_del_med_d,
+                        Dist3 = to_del_coefs[['PeriodPeriod2']] + to_del_coefs[['euc_dist:PeriodPeriod2']]*to_del_max_d)
 
 
-
-
+rm(tmp_list, to_del_ddmod_table, to_del_mod_form, to_del_des_mat, to_del_mod_obj, to_del_med_d, to_del_max_d, to_del_coefs,
+   to_del_coef_combos)
 
 
