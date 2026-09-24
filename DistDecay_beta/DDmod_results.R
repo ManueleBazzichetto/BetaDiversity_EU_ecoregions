@@ -1,11 +1,8 @@
 
-#This script includes code for importing results of the distance-decay models fitted on the Czech HPC.
+#This script includes code for importing results of the distance-decay model bootstrap fitted on computer cluster.
 
 library(ggplot2)
 library(ggpubr)
-
-##!!!!!CHECK SIGNS OF COEFS!!!!!
-
 
 #rm(list_out_fin, distances_used)
 
@@ -190,6 +187,39 @@ ggplot(grass_combo_qnts, aes(x = Dist, group = ECO_NM)) +
   theme_pubr()
 
 
+# -- check on coef (not combos)
+
+#check sign of coefs for Geographic distance (euc_dist) and Abs_diff_plot_size_sqrt
+#these should be negative (or anyway super close to 0), otherwise there may be problems in fitting the models
+
+exists('grass_coef') #F
+
+grass_coef <- do.call(rbind, lapply(names(grass_ddmod_out), function(eco_nm) {
+  
+  coef_mat <- data.frame(do.call(rbind, lapply(grass_ddmod_out[[eco_nm]], function(i) i[['Coef']])))
+  
+  coef_mat$ECO_NM <- eco_nm
+  
+  return(coef_mat)
+  
+  }))
+
+
+ggplot(grass_coef, aes(x = euc_dist)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0, col = 'red') +
+  xlab('Geographic distance') +
+  facet_wrap(~ ECO_NM, scales = 'free_x') +
+  theme_pubr()
+
+ggplot(grass_coef, aes(x = Abs_diff_plot_size_sqrt)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0, col = 'red') +
+  xlab('Absolute difference plot size (sqrt)') +
+  facet_wrap(~ ECO_NM, scales = 'free_x') +
+  theme_pubr()
+
+
 # ----------------------------- forests
 
 # -- create a list including results for the ecoregions
@@ -337,4 +367,34 @@ ggplot(for_combo_qnts, aes(x = Dist, group = ECO_NM)) +
   facet_wrap(~ ECO_NM) +
   theme_pubr()
 
+# -- check on coef (not combos)
 
+#check sign of coefs for Geographic distance (euc_dist) and Abs_diff_plot_size_sqrt
+#these should be negative (or anyway super close to 0), otherwise there may be problems in fitting the models
+
+exists('for_coef') #F
+
+for_coef <- do.call(rbind, lapply(names(for_ddmod_out), function(eco_nm) {
+  
+  coef_mat <- data.frame(do.call(rbind, lapply(for_ddmod_out[[eco_nm]], function(i) i[['Coef']])))
+  
+  coef_mat$ECO_NM <- eco_nm
+  
+  return(coef_mat)
+  
+}))
+
+
+ggplot(for_coef, aes(x = euc_dist)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0, col = 'red') +
+  xlab('Geographic distance') +
+  facet_wrap(~ ECO_NM, scales = 'free_x') +
+  theme_pubr()
+
+ggplot(for_coef, aes(x = Abs_diff_plot_size_sqrt)) +
+  geom_histogram() +
+  geom_vline(xintercept = 0, col = 'red') +
+  xlab('Absolute difference plot size (sqrt)') +
+  facet_wrap(~ ECO_NM, scales = 'free_x') +
+  theme_pubr()
