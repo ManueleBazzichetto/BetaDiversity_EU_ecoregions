@@ -3585,10 +3585,16 @@ map_of_sel_ecor <- ggplot() +
   geom_sf(data = eu_ecor_sel, aes(fill = g_f_gANDf), alpha = .8) +
   geom_sf_label(data = eu_ecor_sel, aes(label = ECO_NAME), size = 5,
                 colour = 'black', alpha = .7, label.size = 0) +
-  scale_fill_manual(values = c('forest' = 'darkgreen', 'grassland' = 'lightgreen', 'grass_and_for' = 'aquamarine'), name = 'Ecoregions') +
+  scale_fill_manual(values = c('forest' = 'darkgreen', 'grassland' = 'lightgreen', 'grass_and_for' = 'aquamarine'),
+                    labels = c('forest' = 'Forest data', 'grassland' = 'Grassland data',
+                               'grass_and_for' = 'Grassland and forest data')) +
   xlab(NULL) + ylab(NULL) +
-  theme(legend.position = 'top', legend.text = element_text(size = 12), legend.title = element_text(size = 14))
+  theme(legend.position = 'top', legend.text = element_text(size = 12), legend.title = element_blank())
 
+ggsave(plot = map_of_sel_ecor, filename = 'Figures/Appendix_plot_distribution/Map_of_ecoregions.jpeg', device = 'jpeg',
+       width = 28, height = 26, units = 'cm', dpi = 300)
+
+#Old version of the plot:
 #saving the image to the IAVS2026 folder for the moment
 #ggsave(plot = map_of_sel_ecor, filename = 'C:/MOTIVATE/Talks_and_presentations/IAVS_2026/Map_of_ecoregions.jpeg', device = 'jpeg',
 #       width = 28, height = 26, units = 'cm', dpi = 300)
@@ -3703,7 +3709,7 @@ dim(plot_ecor_g); dim(plot_ecor_f) #131,815; 85,657
 #rbind grassland and forest data
 plot_ecor <- rbind(plot_ecor_g, plot_ecor_f)
 
-dim(plot_ecor) #217, 472
+dim(plot_ecor) #217,472
 
 #coerce ESy_plus_LLM_lev1 to a factor
 class(plot_ecor$ESy_plus_LLM_lev1)
@@ -3716,27 +3722,54 @@ ecor_spec_plot <- lapply(names(sel_ecor_names), function(eco_nm) {
   #split dtf
   dtf <- plot_ecor[plot_ecor$ECO_NM == eco_nm, ]
   
-  #check if both habitat types are present
-  #hab_typs <- unique(dtf[['ESy_plus_LLM_lev1']])
-  
   #extract eco_nm long
   eco_nm_long <- unique(dtf[['ECO_NM_long']])
   
   res <- ggplot() +
-    geom_sf(data = eu_ecor_sel[eu_ecor_sel$ECO_NAME == eco_nm_long, ], col = 'black', fill = 'white', alpha = .8, lwd = 1) +
-    geom_sf(data = dtf, aes(col = Period), size = 1.5) +
+    geom_sf(data = eu_ecor_sel[eu_ecor_sel$ECO_NAME == eco_nm_long, ], col = 'black', fill = 'white', lwd = 1) +
+    geom_sf(data = dtf, aes(col = Period), size = 1.5, alpha = .4) +
     scale_color_manual(values = c('period1' = 'grey', 'period2' = 'purple'),
                        labels = c('period1' = 'Period1', 'period2' = 'Period2'),
                        name = 'Period') +
     facet_grid(~ ESy_plus_LLM_lev1, labeller = labeller(ESy_plus_LLM_lev1 = c('R' = 'Grassland', 'T' = 'Forest'))) +
     ggtitle(eco_nm_long) +
     theme_pubclean() +
-    theme(strip.text = element_text(size = 14), legend.text = element_text(size = 12),
-          legend.title = element_text(size = 14))
+    theme(strip.text = element_text(size = 16), legend.text = element_text(size = 14),
+          legend.title = element_blank(), title = element_text(size = 18), legend.position = 'bottom')
   
   return(res)
   
   })
+
+names(ecor_spec_plot) <- names(sel_ecor_names)
+
+#print using different params the ecoregions for which both grassland and forest data were analysed
+#shared_ecor_names
+
+#single plot -> impossible to visualise
+#ggarrange(plotlist = ecor_spec_plot[c(1, 3, 5, 7, 8, 9, 10, 12)], nrow = 8, ncol = 1, common.legend = T)
+
+for(nm in (names(ecor_spec_plot)[c(1, 3, 5, 7, 8, 9, 10, 12)])) {
+  
+  ggsave(plot = ecor_spec_plot[[nm]], filename = paste0('Figures/Appendix_plot_distribution/', nm, '.jpeg'),
+         device = 'jpeg', width = 28, height = 22, units = 'cm', dpi = 300)
+  
+}
+
+rm(nm)
+
+#plot of remaining ecoregions, which are unique to either grassland or forest
+unq_grass_plot <- ggarrange(ecor_spec_plot$Baltic_mf, ecor_spec_plot$Celtic_bf, nrow = 1, ncol = 2,
+                            common.legend = T, legend = 'bottom')
+
+ggsave(plot = unq_grass_plot, filename = 'Figures/Appendix_plot_distribution/Unq_grass.jpeg',
+       device = 'jpeg', width = 28, height = 22, units = 'cm', dpi = 300)
+
+unq_forest_plot <- ggarrange(ecor_spec_plot$TyrAdr_smf, ecor_spec_plot$DinMon_mf, nrow = 1, ncol = 2,
+                             common.legend = T, legend = 'bottom')
+
+ggsave(plot = unq_forest_plot, filename = 'Figures/Appendix_plot_distribution/Unq_for.jpeg',
+       device = 'jpeg', width = 28, height = 22, units = 'cm', dpi = 300)
 
 
 #-------------------------------------------------rank ecoregions by altitude, longitude and latitude
