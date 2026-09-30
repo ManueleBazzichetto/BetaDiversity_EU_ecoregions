@@ -3593,6 +3593,152 @@ map_of_sel_ecor <- ggplot() +
 #ggsave(plot = map_of_sel_ecor, filename = 'C:/MOTIVATE/Talks_and_presentations/IAVS_2026/Map_of_ecoregions.jpeg', device = 'jpeg',
 #       width = 28, height = 26, units = 'cm', dpi = 300)
 
+
+#----create a map showing the distribution of vegetation plots within each selected ecoregion
+
+#check existence of new objects
+exists('plot_ecor_g') #FALSE
+exists('plot_ecor_f') #FALSE
+exists('plot_ecor') #FALSE
+
+all(names(Matched_datasets_grass) %in% names(sel_ecor_names)) #T
+all(names(Matched_datasets_forest) %in% names(sel_ecor_names)) #T
+
+# -- grasslands
+
+#create a data.frame with plot coordinates and other information for mapping their distribution and attributes
+
+plot_ecor_g <- do.call(rbind, lapply(names(Matched_datasets_grass), function(eco_nm) {
+  
+  #extract ecoregion long name for plot title
+  eco_title <- sel_ecor_names[[eco_nm]]
+  
+  #make some edits to eco names
+  if(eco_title == "Italian_sclerophyllous_and_semi_deciduous_forests") eco_title <- "Italian sclerophyllous and semi-deciduous forests"
+  
+  if(eco_title == "Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests") eco_title <- "Tyrrhenian-Adriatic sclerophyllous and mixed forests"
+  
+  if(all(eco_title != c("Italian_sclerophyllous_and_semi_deciduous_forests", "Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests"))) {
+    
+    #remove '_' and add '-' where needed
+    eco_title <- gsub(pattern = '_', replacement = ' ', x = eco_title)
+    
+  }
+  
+  #rbind period specific datasets after selecting columns for plotting
+  
+  #extract list with period-specific datasets
+  eco_lst <- Matched_datasets_grass[[eco_nm]]
+  
+  eco_dtf <- do.call(rbind, lapply(eco_lst, function(dtf) {
+    
+    #select cols relevant for plot
+    dtf <- dtf[c('ESy_plus_LLM_lev1', 'X_laea', 'Y_laea', 'Period')]
+    
+    #return object
+    return(dtf)
+    
+  }))
+  
+  #add short and long name of ecoregion
+  eco_dtf$ECO_NM <- eco_nm
+  eco_dtf$ECO_NM_long <- eco_title
+  
+  #return result
+  return(eco_dtf)
+  
+  }))
+
+#transform to spatial object
+plot_ecor_g <- st_as_sf(x = plot_ecor_g, coords = c('X_laea', 'Y_laea'), crs = epsg_proj)
+
+# -- forests
+
+plot_ecor_f <- do.call(rbind, lapply(names(Matched_datasets_forest), function(eco_nm) {
+  
+  #extract ecoregion long name for plot title
+  eco_title <- sel_ecor_names[[eco_nm]]
+  
+  #make some edits to eco names
+  if(eco_title == "Italian_sclerophyllous_and_semi_deciduous_forests") eco_title <- "Italian sclerophyllous and semi-deciduous forests"
+  
+  if(eco_title == "Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests") eco_title <- "Tyrrhenian-Adriatic sclerophyllous and mixed forests"
+  
+  if(all(eco_title != c("Italian_sclerophyllous_and_semi_deciduous_forests", "Tyrrhenian_Adriatic_sclerophyllous_and_mixed_forests"))) {
+    
+    #remove '_' and add '-' where needed
+    eco_title <- gsub(pattern = '_', replacement = ' ', x = eco_title)
+    
+  }
+  
+  #rbind period specific datasets after selecting columns for plotting
+  
+  #extract list with period-specific datasets
+  eco_lst <- Matched_datasets_forest[[eco_nm]]
+  
+  eco_dtf <- do.call(rbind, lapply(eco_lst, function(dtf) {
+    
+    #select cols relevant for plot
+    dtf <- dtf[c('ESy_plus_LLM_lev1', 'X_laea', 'Y_laea', 'Period')]
+    
+    #return object
+    return(dtf)
+    
+  }))
+  
+  #add short and long name of ecoregion
+  eco_dtf$ECO_NM <- eco_nm
+  eco_dtf$ECO_NM_long <- eco_title
+  
+  #return result
+  return(eco_dtf)
+  
+  }))
+
+#transform to spatial object
+plot_ecor_f <- st_as_sf(x = plot_ecor_f, coords = c('X_laea', 'Y_laea'), crs = epsg_proj)
+
+dim(plot_ecor_g); dim(plot_ecor_f) #131,815; 85,657
+
+#rbind grassland and forest data
+plot_ecor <- rbind(plot_ecor_g, plot_ecor_f)
+
+dim(plot_ecor) #217, 472
+
+#coerce ESy_plus_LLM_lev1 to a factor
+class(plot_ecor$ESy_plus_LLM_lev1)
+
+plot_ecor$ESy_plus_LLM_lev1 <- factor(plot_ecor$ESy_plus_LLM_lev1, levels = c('R', 'T'))
+
+#ecoregion specific plot
+ecor_spec_plot <- lapply(names(sel_ecor_names), function(eco_nm) {
+  
+  #split dtf
+  dtf <- plot_ecor[plot_ecor$ECO_NM == eco_nm, ]
+  
+  #check if both habitat types are present
+  #hab_typs <- unique(dtf[['ESy_plus_LLM_lev1']])
+  
+  #extract eco_nm long
+  eco_nm_long <- unique(dtf[['ECO_NM_long']])
+  
+  res <- ggplot() +
+    geom_sf(data = eu_ecor_sel[eu_ecor_sel$ECO_NAME == eco_nm_long, ], col = 'black', fill = 'white', alpha = .8, lwd = 1) +
+    geom_sf(data = dtf, aes(col = Period), size = 1.5) +
+    scale_color_manual(values = c('period1' = 'grey', 'period2' = 'purple'),
+                       labels = c('period1' = 'Period1', 'period2' = 'Period2'),
+                       name = 'Period') +
+    facet_grid(~ ESy_plus_LLM_lev1, labeller = labeller(ESy_plus_LLM_lev1 = c('R' = 'Grassland', 'T' = 'Forest'))) +
+    ggtitle(eco_nm_long) +
+    theme_pubclean() +
+    theme(strip.text = element_text(size = 14), legend.text = element_text(size = 12),
+          legend.title = element_text(size = 14))
+  
+  return(res)
+  
+  })
+
+
 #-------------------------------------------------rank ecoregions by altitude, longitude and latitude
 
 #the ranking is based on longitude, latitude and altitude of the vegetation plots
