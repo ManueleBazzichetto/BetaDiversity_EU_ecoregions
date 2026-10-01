@@ -778,20 +778,3 @@ for(nm in forest_names) {
 
 rm(nm, prd, tmp_list)
 
-
-
-
-
-
-#save EVA_veg_* datasets to be used in another project to assess how beta diversity changes along geographical distance
-#save EVA_duply_pairs for the same reason
-#
-#save(EVA_veg_grass, EVA_veg_forest, file = '/Temporary_proj_beta_dist/EVA_veg_datasets.RData')
-#save(EVA_duply_pairs, file = '/Temporary_proj_beta_dist/EVA_duply_pairs_list.RData')
-
-
-
-
-
-
-
