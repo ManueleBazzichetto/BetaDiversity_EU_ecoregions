@@ -2,7 +2,7 @@
 #This code is simply to save number of dissimilarities for each ecoregion and period after excluding spatial duplicates
 #and setting the cup to 100 million pairs
 
-
+#The number of (dis)similarities is the same for tables used for fitting GDMs and for fitting distance-decay models
 
 # -- grasslands
 
@@ -49,3 +49,48 @@ for(nm in ecor_grass_nm) {
 }
 
 rm(nm)
+
+min(as.vector(grass_smp_dis)) #646,625
+median(as.vector(grass_smp_dis)) #13,919,373
+
+
+# -- forests
+
+exists('path_to_for_tables'); exists('ecor_for_obj'); exists('ecor_for_nm') #FALSE*3
+
+#create object including path to tables formatted for GDMs
+path_to_for_tables <- '/MOTIVATE/GDM_EuropeanEcoregions/Data_for_analyses/tables_for_gdm_forest/'
+
+#retrieve object names of tables formatted for GDMs
+ecor_for_obj <- list.files(path = path_to_for_tables, pattern = 'forest.RData', full.names = F)
+
+#extract ecoregion names
+ecor_for_nm <- sapply(strsplit(x = ecor_for_obj, split = '.', fixed = T), function(i) i[1])
+
+
+#create empty matrix to store result
+exists('for_smp_dis') #F
+
+for_smp_dis <- matrix(0, nrow = length(ecor_for_nm), ncol = 2, dimnames = list(ecor_for_nm, c('Period1', 'Period2')))
+
+exists('tmp_list') #F
+
+for(nm in ecor_for_nm) {
+  
+  load(paste0(path_to_for_tables, nm, '.RData'))
+  
+  dis_smp_sz <- sapply(tmp_list, nrow)
+  
+  for_smp_dis[nm, 'Period1'] <- dis_smp_sz[['Period1']]
+  for_smp_dis[nm, 'Period2'] <- dis_smp_sz[['Period2']]
+  
+  rm(tmp_list, dis_smp_sz)
+  
+}
+
+
+rm(nm)
+
+min(as.vector(for_smp_dis)) #765,171
+median(as.vector(for_smp_dis)) #6,081,323
+
