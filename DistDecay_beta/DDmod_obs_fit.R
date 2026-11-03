@@ -28,7 +28,7 @@
 
 #The idea is to derive confidence intervals for these quantities. However, the non-independence between similarities (each plot
 #is ideally used in N-1 comparisons) makes it necessary to use bootstrap. The bootstrap procedure will be implemented on
-#a computer cluster.
+#the Czech HPC (High-Performance Computing cluster).
 
 
 library(data.table) #quick computations on large tables for fitting dd-models
@@ -160,6 +160,23 @@ rm(eco_nm)
 grass_obs_ddmod_dist
 grass_obs_ddmod_out
 
+#extract estimated coef combo - these values will be plotted together with the percentile-based bt CIs
+
+exists('obs_coef_combo_grass')
+
+obs_coef_combo_grass <- as.data.frame(do.call(rbind, lapply(grass_obs_ddmod_out, function(i) i[['Coef_combo']])))
+
+#modify colnames
+colnames(obs_coef_combo_grass) <- c('1km', 'Median', 'Max.')
+
+#add ECO_NM col
+obs_coef_combo_grass$ECO_NM <- row.names(obs_coef_combo_grass)
+
+#transform to long format
+obs_coef_combo_grass <- data.frame(tidyr::pivot_longer(obs_coef_combo_grass, cols = 1:3, names_to = 'Dist', values_to = 'Est'))
+
+#coerce Dist to factor
+obs_coef_combo_grass$Dist <- factor(obs_coef_combo_grass$Dist, levels = c('1km', 'Median', 'Max.'))
 
 
 # ------------- forests
@@ -279,7 +296,21 @@ rm(eco_nm)
 for_obs_ddmod_dist
 for_obs_ddmod_out
 
+#extract estimated coef combo
 
+exists('obs_coef_combo_for') #F
 
+obs_coef_combo_for <- as.data.frame(do.call(rbind, lapply(for_obs_ddmod_out, function(i) i[['Coef_combo']])))
+
+colnames(obs_coef_combo_for) <- c('1km', 'Median', 'Max.')
+
+obs_coef_combo_for$ECO_NM <- row.names(obs_coef_combo_for)
+
+#transform to long format
+obs_coef_combo_for <- data.frame(tidyr::pivot_longer(data = obs_coef_combo_for, cols = 1:3,
+                                                     names_to = 'Dist', values_to = 'Est'))
+
+#coerce Dist to factor
+obs_coef_combo_for$Dist <- factor(obs_coef_combo_for$Dist, levels = c('1km', 'Median', 'Max.'))
 
 
