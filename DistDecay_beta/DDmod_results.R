@@ -488,25 +488,25 @@ grass_for_qnts_est_dtf$ECO_NM <- factor(grass_for_qnts_est_dtf$ECO_NM,
 grass_for_qnts_est_unq_plot <- ggplot(grass_for_qnts_est_dtf[grass_for_qnts_est_dtf$Dist != 'Max.', ],
                                       aes(x = Est, y = ECO_NM, color = Habitat, group = Habitat)) +
   geom_vline(xintercept = 0, col = 'grey', linewidth = 1) +
-  geom_errorbar(aes(xmin = Q_2.5, xmax = Q_97.5), width = 0, linewidth = 1.5, color = 'black',
+  geom_errorbar(aes(xmin = Q_2.5, xmax = Q_97.5), width = 0, linewidth = 2, color = 'black',
                 position = position_dodge(width = 0.3)) +
-  geom_point(size = 3.5, position = position_dodge(width = 0.3)) +
+  geom_point(size = 4, position = position_dodge(width = 0.3)) +
   scale_color_manual(values = c('Grassland' = "#009E73", 'Forest' = "#A6761D")) +
   geom_segment(x = 0, xend = 0.4, y = .6, yend = .6, col = 'black', linewidth = 1.3,
                arrow = arrow(length = unit(0.5, 'cm'))) +
-  annotate(geom = 'text', x = 0.6, y = .6, label = 'homogenisation', size = 6) +
+  annotate(geom = 'text', x = 0.6, y = .7, label = 'homog.', size = 10) +
   geom_segment(x = 0, xend = -0.4, y = .6, yend = .6, col = 'black', linewidth = 1.3, 
                arrow = arrow(length = unit(0.5, 'cm'))) +
-  annotate(geom = 'text', x = -0.6, y = .6, label = 'differentiation', size = 6) +
+  annotate(geom = 'text', x = -0.5, y = .7, label = 'diff.', size = 10) +
   facet_wrap(~ Dist, labeller = as_labeller(c('1km' = 'Short distance', 'Median' = 'Median distance'))) +
   ylab(NULL) + xlab('Change in mean similarity between periods') +
   theme_pubr() +
-  theme(strip.text = element_text(size = 16), axis.text.y.left = element_text(size = 14),
-        axis.title.x.bottom = element_text(size = 16), legend.title = element_blank(),
-        legend.text = element_text(size = 14))
+  theme(strip.text = element_text(size = 22), axis.text.y.left = element_text(size = 22),
+        axis.title.x.bottom = element_text(size = 22), axis.text.x.bottom = element_text(size = 18), 
+        legend.title = element_blank(), legend.text = element_text(size = 22))
 
 
 ggsave(filename = 'Results_figs/DDmod_qnts_est_grass_for_unq.jpeg', plot = grass_for_qnts_est_unq_plot, device = 'jpeg',
-       width = 46, height = 22, units = 'cm', dpi = 300)
+       width = 45, height = 24, units = 'cm', dpi = 300)
 
 
