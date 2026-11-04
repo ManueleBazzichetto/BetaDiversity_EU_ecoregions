@@ -467,17 +467,46 @@ grass_for_qnts_est_dtf <- rbind(data.frame(grass_combo_qnts_est, Habitat = 'Gras
 
 grass_for_qnts_est_dtf$Habitat <- factor(grass_for_qnts_est_dtf$Habitat, levels = c('Grassland', 'Forest'))
 
+#ggplot(grass_for_qnts_est_dtf[grass_for_qnts_est_dtf$Dist != 'Max.', ],
+#       aes(x = Dist, y = Est, group = ECO_NM, col = Habitat)) +
+#  geom_errorbar(aes(ymin = Q_2.5, ymax = Q_97.5), width = 0.1, lwd = 1.2, col = 'black') +
+#  geom_point(size = 2) +
+#  geom_hline(yintercept = 0, col = 'grey', lwd = 1) +
+#  ylab('Change in mean similarity between periods') + xlab(NULL) +
+#  scale_color_manual(values = c('Grassland' = 'green', 'Forest' = 'blue')) +
+#  scale_x_discrete(labels = c('1km' = 'Short distance', 'Median' = 'Median distance')) +
+#  facet_wrap(~ ECO_NM) +
+#  theme_pubr() +
+#  theme(title = element_text(size = 18), strip.text = element_text(size = 16),
+#        axis.text.x.bottom = element_text(size = 14, angle = 25, hjust = .5, vjust = .6))
 
-ggplot(grass_for_qnts_est_dtf[grass_for_qnts_est_dtf$Dist != 'Max.', ],
-       aes(x = Dist, y = Est, group = ECO_NM, col = Habitat)) +
-  geom_errorbar(aes(ymin = Q_2.5, ymax = Q_97.5), width = 0.1, lwd = 1.2, col = 'black') +
-  geom_point(size = 2) +
-  geom_hline(yintercept = 0, col = 'grey', lwd = 1) +
-  ylab('Change in mean similarity between periods') + xlab(NULL) +
-  scale_color_manual(values = c('Grassland' = 'green', 'Forest' = 'blue')) +
-  scale_x_discrete(labels = c('1km' = 'Short distance', 'Median' = 'Median distance')) +
-  facet_wrap(~ ECO_NM) +
+#reverse order of ecoregion labels
+grass_for_qnts_est_dtf$ECO_NM <- factor(grass_for_qnts_est_dtf$ECO_NM, 
+                                        levels = sort(unique(grass_for_qnts_est_dtf$ECO_NM), decreasing = T))
+
+
+grass_for_qnts_est_unq_plot <- ggplot(grass_for_qnts_est_dtf[grass_for_qnts_est_dtf$Dist != 'Max.', ],
+                                      aes(x = Est, y = ECO_NM, color = Habitat, group = Habitat)) +
+  geom_vline(xintercept = 0, col = 'grey', linewidth = 1) +
+  geom_errorbar(aes(xmin = Q_2.5, xmax = Q_97.5), width = 0, linewidth = 1.5, color = 'black',
+                position = position_dodge(width = 0.3)) +
+  geom_point(size = 3.5, position = position_dodge(width = 0.3)) +
+  scale_color_manual(values = c('Grassland' = "#009E73", 'Forest' = "#A6761D")) +
+  geom_segment(x = 0, xend = 0.4, y = .6, yend = .6, col = 'black', linewidth = 1.3,
+               arrow = arrow(length = unit(0.5, 'cm'))) +
+  annotate(geom = 'text', x = 0.6, y = .6, label = 'homogenisation', size = 6) +
+  geom_segment(x = 0, xend = -0.4, y = .6, yend = .6, col = 'black', linewidth = 1.3, 
+               arrow = arrow(length = unit(0.5, 'cm'))) +
+  annotate(geom = 'text', x = -0.6, y = .6, label = 'differentiation', size = 6) +
+  facet_wrap(~ Dist, labeller = as_labeller(c('1km' = 'Short distance', 'Median' = 'Median distance'))) +
+  ylab(NULL) + xlab('Change in mean similarity between periods') +
   theme_pubr() +
-  theme(title = element_text(size = 18), strip.text = element_text(size = 16),
-        axis.text.x.bottom = element_text(size = 14, angle = 25, hjust = .5, vjust = .6))
+  theme(strip.text = element_text(size = 16), axis.text.y.left = element_text(size = 14),
+        axis.title.x.bottom = element_text(size = 16), legend.title = element_blank(),
+        legend.text = element_text(size = 14))
+
+
+ggsave(filename = 'Results_figs/DDmod_qnts_est_grass_for_unq.jpeg', plot = grass_for_qnts_est_unq_plot, device = 'jpeg',
+       width = 46, height = 22, units = 'cm', dpi = 300)
+
 
