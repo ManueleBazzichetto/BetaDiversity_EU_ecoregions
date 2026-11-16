@@ -5,6 +5,9 @@
 library(ggplot2)
 library(ggpubr)
 
+library(flextable) #for tables
+library(officer) #for tables
+
 #rm(list_out_fin, distances_used)
 
 #this loads 2 objects: list_out_fin (with model outputs - 6 output for bt replicate)
@@ -508,5 +511,48 @@ grass_for_qnts_est_unq_plot <- ggplot(grass_for_qnts_est_dtf[grass_for_qnts_est_
 
 ggsave(filename = 'Results_figs/DDmod_qnts_est_grass_for_unq.jpeg', plot = grass_for_qnts_est_unq_plot, device = 'jpeg',
        width = 45, height = 24, units = 'cm', dpi = 300)
+
+
+#-- save results as table
+
+exists('ddmod_res_tab') #F
+
+ddmod_res_tab <- grass_for_qnts_est_dtf[grass_for_qnts_est_dtf$Dist != 'Max.', ]
+
+#order rows alphabetically according to ECO_NM
+ddmod_res_tab <- ddmod_res_tab[order(as.character(ddmod_res_tab$ECO_NM), decreasing = F), ]
+
+#modify Dist 1 km to 'Short'
+ddmod_res_tab$Dist <- as.character(ddmod_res_tab$Dist)
+ddmod_res_tab[ddmod_res_tab$Dist == '1km', 'Dist'] <- 'Short'
+
+#add col with exp(Est) - percentage change in mean similarity between periods
+ddmod_res_tab$Est_exp <- exp(ddmod_res_tab$Est)
+
+#re-order columns
+ddmod_res_tab <- ddmod_res_tab[c('ECO_NM', 'Habitat', 'Dist', 'Est', 'Q_2.5', 'Q_97.5', 'Est_exp')]
+
+#rename cols
+colnames(ddmod_res_tab) <- c('Ecoregion', 'Habitat', 'Distance', 'Estimate', 'Q2.5', 'Q97.5', 'Estimate (exp)')
+
+#generate and save table
+
+ddmod_res_tab <- flextable(ddmod_res_tab)
+
+ddmod_res_tab <- colformat_double(ddmod_res_tab, digits = 2)
+
+ddmod_res_tab <- bold(ddmod_res_tab, bold = T, part = 'header')
+
+ddmod_res_tab <- fontsize(ddmod_res_tab, size = 12, part = 'header')
+
+ddmod_res_tab <- merge_v(ddmod_res_tab, j = ~ Ecoregion)
+
+ddmod_res_tab <- border_inner_h(ddmod_res_tab, border = fp_border(color="gray", width = 1), part = 'body')
+
+ddmod_res_tab <- set_table_properties(x = ddmod_res_tab, layout = 'autofit')
+
+save_as_docx(ddmod_res_tab, path = 'Results_tabs/DDmodel_results.docx')
+
+
 
 
