@@ -114,7 +114,7 @@ cl_hum_grass_alt_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1,
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
   xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Grassland - Elevation') +
-  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Human pressure'))) +
   theme_pubr() +
   theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
         strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
@@ -131,7 +131,7 @@ cl_hum_grass_long_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
   xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Grassland - Longitude') +
-  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Human pressure'))) +
   theme_pubr() +
   theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
         strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
@@ -148,7 +148,7 @@ cl_hum_grass_lat_plot <- ggplot(cl_hum_part_grass, aes(x = DEVIANCE_scaled_Prd1,
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
   xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Grassland - Latitude') +
-  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Human pressure'))) +
   theme_pubr() +
   theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
         strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
@@ -195,7 +195,7 @@ wfuncs_cl_hmi_grass_plot <- ggplot(isplines_grass_cl_hmi_dtf, aes(x = Values_x, 
   facet_grid(ECO_NM ~ Variable_x, scales = 'free',
              labeller = labeller(Variable_x = c('Tavg' = 'Temperature (C°)',
                                                 'Prcp' = 'Precipitation (mm)',
-                                                'Hmi_value' = 'Land use'))) +
+                                                'Hmi_value' = 'Human pressure'))) +
   ylab('Partial ecological distance (scaled)') + xlab(NULL) + ggtitle('Grassland') +
   theme_pubr() +
   theme(legend.text = element_text(size = 16), legend.title = element_text(size = 18),
@@ -300,7 +300,7 @@ cl_hum_for_alt_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y =
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
   xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Forest - Elevation') +
-  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Human pressure'))) +
   theme_pubr() +
   theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
         strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
@@ -317,7 +317,7 @@ cl_hum_for_long_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y 
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
   xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Forest - Longitude') +
-  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Human pressure'))) +
   theme_pubr() +
   theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
         strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
@@ -335,7 +335,7 @@ cl_hum_for_lat_plot <- ggplot(cl_hum_part_for, aes(x = DEVIANCE_scaled_Prd1, y =
   xlab('Explained deviance - Period1 (%)') + ylab('Explained deviance - Period2 (%)') +
   xlim(c(0, 80)) + ylim(c(0, 60)) +
   ggtitle('Forest - Latitude') +
-  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Land use'))) +
+  facet_wrap(~ VARIABLE_SET, labeller = as_labeller(c('climate alone' = 'Climate', 'human alone' = 'Human pressure'))) +
   theme_pubr() +
   theme(plot.title = element_text(size = 18), legend.title = element_blank(), legend.text = element_text(size = 12),
         strip.text = element_text(size = 16), axis.title = element_text(size = 14), legend.position = 'right')
@@ -383,7 +383,7 @@ wfuncs_cl_hmi_for_plot <- ggplot(isplines_for_cl_hmi_dtf, aes(x = Values_x, y = 
   scale_color_manual(values = c('Period1' = 'grey', 'Period2' = 'purple')) +
   facet_grid(ECO_NM ~ Variable_x, scales = 'free', labeller = labeller(Variable_x = c('Tavg' = 'Temperature (C°)',
                                                                                       'Prcp' = 'Precipitation (mm)',
-                                                                                      'Hmi_value' = 'Land use'))) +
+                                                                                      'Hmi_value' = 'Human pressure'))) +
   ylab('Partial ecological distance (scaled)') + xlab(NULL) + ggtitle('Forest') +
   theme_pubr() +
   theme(legend.text = element_text(size = 16), legend.title = element_text(size = 18), axis.title.y = element_text(size = 16),
