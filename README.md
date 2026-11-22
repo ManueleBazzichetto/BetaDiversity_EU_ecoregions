@@ -1,4 +1,4 @@
-This repository includes the R code to replicate the results presented in the manuscript: \_Weak evidence of biotic homogenisation in European grasslands and forests despite changes in the influence of climate and human pressure over the past four decades\_.
+This repository includes the R code to replicate the results presented in the manuscript: *Weak evidence of biotic homogenisation in European grasslands and forests despite changes in the influence of climate and human pressure over the past four decades*.
 
 
 
@@ -10,7 +10,7 @@ The R scripts are organized (and should be used) as presented in the scheme belo
 
 
 
-A first set of scripts, which can be found on the repository home, includes code for pre-processing vegetation-plot data from the \[\*European Vegetation Archive\*](https://doi.org/10.1111/avsc.12191) and \[\*ReSurveyEurope\*](https://doi.org/10.1111/jvs.13235) for subsequent analyses. The scripts implement the following steps:
+A first set of scripts, which can be found on the repository home, includes code for pre-processing vegetation-plot data from the [*European Vegetation Archive*](https://doi.org/10.1111/avsc.12191) and [*ReSurveyEurope*](https://doi.org/10.1111/jvs.13235) for subsequent analyses. The scripts implement the following steps:
 
 
 
